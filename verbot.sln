@@ -3,8 +3,69 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "verbot", "verbot\verbot.csproj", "{F06F62BA-78B4-4D83-9A27-1EA997938924}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{99B21B55-4E2D-4B1A-AA3A-D86F67058C56}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		.nugit = .nugit
+		license.txt = license.txt
+		readme.md = readme.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "nugit-macro-sharp", "nugit-macro-sharp", "{4F6C101C-12B6-4C12-A5AF-4DD26FC6BE28}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MacroAttributeGuards", "..\macro-sharp\MacroAttributeGuards\MacroAttributeGuards.csproj", "{B06AECBA-46E8-41A4-B64A-21D8D8125EEC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MacroDiagnostics", "..\macro-sharp\MacroDiagnostics\MacroDiagnostics.csproj", "{650A86C2-C971-48DE-8DF1-13970BC9D3C2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MacroGuards", "..\macro-sharp\MacroGuards\MacroGuards.csproj", "{0049D988-2426-45B0-8FDA-EAB78622D887}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MacroSystem", "..\macro-sharp\MacroSystem\MacroSystem.csproj", "{4B9B553A-B600-4DAE-AC79-1D0CB0B35584}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "nugit-macro-sharp-git", "nugit-macro-sharp-git", "{FA5D23A9-0653-433E-9455-4C8518F06600}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MacroGit", "..\macro-sharp-git\MacroGit\MacroGit.csproj", "{2852B710-2752-4F72-963C-46D92F6C5C2E}"
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F06F62BA-78B4-4D83-9A27-1EA997938924}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F06F62BA-78B4-4D83-9A27-1EA997938924}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F06F62BA-78B4-4D83-9A27-1EA997938924}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F06F62BA-78B4-4D83-9A27-1EA997938924}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B06AECBA-46E8-41A4-B64A-21D8D8125EEC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B06AECBA-46E8-41A4-B64A-21D8D8125EEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B06AECBA-46E8-41A4-B64A-21D8D8125EEC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B06AECBA-46E8-41A4-B64A-21D8D8125EEC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{650A86C2-C971-48DE-8DF1-13970BC9D3C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{650A86C2-C971-48DE-8DF1-13970BC9D3C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{650A86C2-C971-48DE-8DF1-13970BC9D3C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{650A86C2-C971-48DE-8DF1-13970BC9D3C2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0049D988-2426-45B0-8FDA-EAB78622D887}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0049D988-2426-45B0-8FDA-EAB78622D887}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0049D988-2426-45B0-8FDA-EAB78622D887}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0049D988-2426-45B0-8FDA-EAB78622D887}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4B9B553A-B600-4DAE-AC79-1D0CB0B35584}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4B9B553A-B600-4DAE-AC79-1D0CB0B35584}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4B9B553A-B600-4DAE-AC79-1D0CB0B35584}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4B9B553A-B600-4DAE-AC79-1D0CB0B35584}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2852B710-2752-4F72-963C-46D92F6C5C2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2852B710-2752-4F72-963C-46D92F6C5C2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2852B710-2752-4F72-963C-46D92F6C5C2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2852B710-2752-4F72-963C-46D92F6C5C2E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B06AECBA-46E8-41A4-B64A-21D8D8125EEC} = {4F6C101C-12B6-4C12-A5AF-4DD26FC6BE28}
+		{650A86C2-C971-48DE-8DF1-13970BC9D3C2} = {4F6C101C-12B6-4C12-A5AF-4DD26FC6BE28}
+		{0049D988-2426-45B0-8FDA-EAB78622D887} = {4F6C101C-12B6-4C12-A5AF-4DD26FC6BE28}
+		{4B9B553A-B600-4DAE-AC79-1D0CB0B35584} = {4F6C101C-12B6-4C12-A5AF-4DD26FC6BE28}
+		{2852B710-2752-4F72-963C-46D92F6C5C2E} = {FA5D23A9-0653-433E-9455-4C8518F06600}
 	EndGlobalSection
 EndGlobal

@@ -1,4 +1,4 @@
-Verbot
+verbot
 ======
 
 A tool for managing software versions and release with Git.
