@@ -1,7 +1,26 @@
 verbot
 ======
 
-A tool for managing software versions and release with Git.
+Tool for managing C# software versions and releases using Git
+
+
+Synopsis
+========
+
+    verbot <command> [<arguments>]
+
+
+Commands
+========
+
+    help
+        Display usage information
+
+    get
+        Discover the version of the current repository
+
+    set
+        Set the version of the current repository
 
 
 License
@@ -15,4 +34,3 @@ Copyright
 
 Copyright (c) 2017  
 Ron MacNeil \<<https://github.com/macro187>\>  
-

@@ -42,6 +42,36 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\macro-sharp-console\MacroConsole\MacroConsole.csproj">
+      <Project>{d6b3952f-d41f-4ce8-9173-448d01e7bb08}</Project>
+      <Name>MacroConsole</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\macro-sharp\MacroDiagnostics\MacroDiagnostics.csproj">
+      <Project>{650a86c2-c971-48de-8df1-13970bc9d3c2}</Project>
+      <Name>MacroDiagnostics</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\macro-sharp\MacroExceptions\MacroExceptions.csproj">
+      <Project>{25b573fb-1fb2-4bae-a118-b633d31cf991}</Project>
+      <Name>MacroExceptions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\macro-sharp\MacroIO\MacroIO.csproj">
+      <Project>{3515e94d-d914-40e3-b0b4-16ddd2bd477f}</Project>
+      <Name>MacroIO</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\macro-sharp\MacroSystem\MacroSystem.csproj">
+      <Project>{4b9b553a-b600-4dae-ac79-1d0cb0b35584}</Project>
+      <Name>MacroSystem</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\readme.md">
+      <Link>readme.md</Link>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
