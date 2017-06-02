@@ -2,5 +2,6 @@ program: verbot/bin/Debug/verbot.exe
 
 https://github.com/macro187/macro-sharp.git#master
 https://github.com/macro187/macro-sharp-git.git#master
+https://github.com/macro187/macro-sharp-sln.git#master
 https://github.com/macro187/macro-sharp-console.git#master
 

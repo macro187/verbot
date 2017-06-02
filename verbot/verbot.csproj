@@ -47,6 +47,14 @@
       <Project>{d6b3952f-d41f-4ce8-9173-448d01e7bb08}</Project>
       <Name>MacroConsole</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\macro-sharp-git\MacroGit\MacroGit.csproj">
+      <Project>{2852b710-2752-4f72-963c-46d92f6c5c2e}</Project>
+      <Name>MacroGit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\macro-sharp-sln\MacroSln\MacroSln.csproj">
+      <Project>{db791e76-82a9-449a-8e3d-aa433a664ad8}</Project>
+      <Name>MacroSln</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\macro-sharp\MacroDiagnostics\MacroDiagnostics.csproj">
       <Project>{650a86c2-c971-48de-8df1-13970bc9d3c2}</Project>
       <Name>MacroDiagnostics</Name>
