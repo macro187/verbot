@@ -4,12 +4,14 @@ using MacroExceptions;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using MacroSystem;
 using MacroIO;
 using MacroConsole;
 using MacroGit;
 using MacroSln;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Semver;
 
 namespace
 verbot
@@ -91,43 +93,19 @@ Help(Queue<string> args)
 static int
 Get(Queue<string> args)
 {
+    if (args.Count > 0) throw new UserException("Unexpected arguments");
+
     var repo = GitRepository.FindContainingRepository(Environment.CurrentDirectory);
     if (repo == null) throw new UserException("Not in a Git repository");
 
     var sln = VisualStudioSolution.Find(repo.Path);
     if (sln == null) throw new UserException("No Visual Studio solution found");
 
-    var assemblyInfos =
-        // All projects
-        sln.ProjectReferences
-            // ...that are C# projects
-            .Where(pr => pr.TypeId == VisualStudioProjectTypeIds.CSharp)
-            // ..."local" to the solution
-            .Where(pr => !pr.Location.StartsWith(".."))
-            .Select(pr => pr.GetProject())
-            // ...all their compile items
-            .SelectMany(p =>
-                p.CompileItems.Select(path =>
-                    Path.GetFullPath(Path.Combine(Path.GetDirectoryName(p.Path), path))))
-            // ...that are .cs files
-            .Where(path => Path.GetExtension(path) == ".cs")
-            // ...and have "AssemblyInfo" in their name
-            .Where(path => Path.GetFileNameWithoutExtension(path).Contains("AssemblyInfo"))
-            .Distinct()
-            .OrderBy(path => path)
-            .ToList();
-
+    var assemblyInfos = FindAssemblyInfos(sln);
     if (assemblyInfos.Count == 0)
         throw new UserException("No `AssemblyInfo` files found in solution");
 
-    var assemblyInfoVersions =
-        assemblyInfos
-            .Select(path => new {
-                Path = path,
-                Version = FindAssemblyAttributeValue(path, "AssemblyInformationalVersion") })
-            .Where(aiv => aiv.Version != null)
-            .ToList();
-
+    var assemblyInfoVersions = FindAssemblyInfoVersions(assemblyInfos);
     if (assemblyInfoVersions.Count == 0)
         throw new UserException("No [AssemblyInformationalVersion] attributes found in solution");
 
@@ -152,6 +130,51 @@ Get(Queue<string> args)
 }
 
 
+static IList<string>
+FindAssemblyInfos(VisualStudioSolution sln)
+{
+    return
+        // All projects
+        sln.ProjectReferences
+            // ...that are C# projects
+            .Where(pr => pr.TypeId == VisualStudioProjectTypeIds.CSharp)
+            // ..."local" to the solution
+            .Where(pr => !pr.Location.StartsWith(".."))
+            .Select(pr => pr.GetProject())
+            // ...all their compile items
+            .SelectMany(p =>
+                p.CompileItems.Select(path =>
+                    Path.GetFullPath(Path.Combine(Path.GetDirectoryName(p.Path), path))))
+            // ...that are .cs files
+            .Where(path => Path.GetExtension(path) == ".cs")
+            // ...and have "AssemblyInfo" in their name
+            .Where(path => Path.GetFileNameWithoutExtension(path).Contains("AssemblyInfo"))
+            .Distinct()
+            .ToList();
+}
+
+
+static IList<AssemblyInfoVersion>
+FindAssemblyInfoVersions(IEnumerable<string> assemblyInfos)
+{
+    return
+        assemblyInfos
+            .Select(path => new {
+                Path = path,
+                Version = FindAssemblyAttributeValue(path, "AssemblyInformationalVersion") })
+            .Where(aiv => aiv.Version != null)
+            .Select(aiv => {
+                SemVersion version;
+                if (!SemVersion.TryParse(aiv.Version, out version))
+                    throw new UserException(StringExtensions.FormatInvariant(
+                        "[AssemblyInformationalVersion] in {0} doesn't contain a valid semver",
+                        aiv.Path));
+                return new AssemblyInfoVersion(aiv.Path, version);
+            })
+            .ToList();
+}
+
+
 static string
 FindAssemblyAttributeValue(string path, string attribute)
 {
@@ -164,6 +187,20 @@ FindAssemblyAttributeValue(string path, string attribute)
         }
     }
     return null;
+}
+
+
+class
+AssemblyInfoVersion
+{
+    public
+    AssemblyInfoVersion(string path, SemVersion version)
+    {
+        Path = path;
+        Version = version;
+    }
+    public string Path { get; }
+    public SemVersion Version { get; }
 }
 
 

@@ -71,6 +71,10 @@
       <Project>{4b9b553a-b600-4dae-ac79-1d0cb0b35584}</Project>
       <Name>MacroSystem</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\semver\.nugit\Semver\Semver.csproj">
+      <Project>{307b4732-0fa9-4baa-9108-59ef9deaa0a7}</Project>
+      <Name>Semver</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
