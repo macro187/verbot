@@ -38,7 +38,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="..\AssemblyInfoShared.cs">
+      <Link>AssemblyInfoShared.cs</Link>
+    </Compile>
+    <Compile Include="..\GlobalSuppressionsShared.cs">
+      <Link>GlobalSuppressionsShared.cs</Link>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

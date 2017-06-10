@@ -13,6 +13,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Semver;
 
+
 namespace
 verbot
 {
@@ -62,6 +63,8 @@ Main2(Queue<string> args)
             return Help(args);
         case "get":
             return Get(args);
+        case "set":
+            return Set(args);
         default:
             throw new UserException("Unrecognised command: " + command);
     }
@@ -73,6 +76,7 @@ Help(Queue<string> args)
 {
     if (args.Count > 0) throw new UserException("Unexpected arguments");
 
+    Trace.TraceInformation("");
     using (var reader = new StreamReader(Assembly.GetCallingAssembly().GetManifestResourceStream("verbot.readme.md")))
     {
         foreach (
@@ -80,7 +84,9 @@ Help(Queue<string> args)
             in ReadmeFilter.SelectSections(
                 reader.ReadAllLines(),
                 "Synopsis",
-                "Commands"))
+                "Description",
+                "Commands"
+                ))
         {
             Trace.TraceInformation(line);
         }
@@ -93,17 +99,14 @@ Help(Queue<string> args)
 static int
 Get(Queue<string> args)
 {
+    var repository = GetRepository();
+    var sln = GetSolution(repository);
+
     if (args.Count > 0) throw new UserException("Unexpected arguments");
-
-    var repo = GitRepository.FindContainingRepository(Environment.CurrentDirectory);
-    if (repo == null) throw new UserException("Not in a Git repository");
-
-    var sln = VisualStudioSolution.Find(repo.Path);
-    if (sln == null) throw new UserException("No Visual Studio solution found");
 
     var assemblyInfos = FindAssemblyInfos(sln);
     if (assemblyInfos.Count == 0)
-        throw new UserException("No `AssemblyInfo` files found in solution");
+        throw new UserException("No AssemblyInfo files found in solution");
 
     var assemblyInfoVersions = FindAssemblyInfoVersions(assemblyInfos);
     if (assemblyInfoVersions.Count == 0)
@@ -117,16 +120,76 @@ Get(Queue<string> args)
 
     if (distinctVersions.Count > 1)
     {
-        Trace.TraceInformation("[AssemblyInformationalVersion]s in solution");
+        Trace.TraceInformation("[AssemblyInformationalVersion] attributes in solution");
         foreach (var aiv in assemblyInfoVersions)
         {
             Trace.TraceInformation("  {0} in {1}", aiv.Version, aiv.Path);
         }
-        throw new UserException("Conflicting [AssemblyInformationalVersion]s found in solution");
+        throw new UserException("Conflicting [AssemblyInformationalVersion] attributes encountered");
     }
 
     Console.Out.WriteLine(distinctVersions.Single());
     return 0;
+}
+
+
+static int
+Set(Queue<string> args)
+{
+    var repository = GetRepository();
+    var sln = GetSolution(repository);
+
+    SemVersion version;
+    if (args.Count == 0) throw new UserException("Expected <version>");
+    if (!SemVersion.TryParse(args.Dequeue(), out version))
+        throw new UserException("Expected <version> in semver format");
+
+    if (args.Count > 0) throw new UserException("Unexpected arguments");
+
+    var assemblyVersion = FormattableString.Invariant(
+        $"{version.Major}.0.0.0");
+
+    var assemblyFileVersion = FormattableString.Invariant(
+        $"{version.Major}.{version.Minor}.{version.Patch}.0");
+
+    var assemblyInfos = FindAssemblyInfos(sln);
+    if (assemblyInfos.Count == 0)
+        throw new UserException("No AssemblyInfo files found in solution");
+
+    int count = 0;
+    foreach (var assemblyInfo in assemblyInfos)
+    {
+        if (TrySetAssemblyAttributeValue(assemblyInfo, "AssemblyInformationalVersion", version.ToString())) count++;
+    }
+
+    if (count == 0)
+        throw new UserException("No [AssemblyInformationalVersion] attributes found in AssemblyInfo files");
+
+    foreach (var assemblyInfo in assemblyInfos)
+    {
+        TrySetAssemblyAttributeValue(assemblyInfo, "AssemblyVersion", assemblyVersion);
+        TrySetAssemblyAttributeValue(assemblyInfo, "AssemblyFileVersion", assemblyFileVersion);
+    }
+
+    return 0;
+}
+
+
+static GitRepository
+GetRepository()
+{
+    var repo = GitRepository.FindContainingRepository(Environment.CurrentDirectory);
+    if (repo == null) throw new UserException("Not in a Git repository");
+    return repo;
+}
+
+
+static VisualStudioSolution
+GetSolution(GitRepository repository)
+{
+    var sln = VisualStudioSolution.Find(repository.Path);
+    if (sln == null) throw new UserException("No Visual Studio solution found");
+    return sln;
 }
 
 
@@ -139,7 +202,7 @@ FindAssemblyInfos(VisualStudioSolution sln)
             // ...that are C# projects
             .Where(pr => pr.TypeId == VisualStudioProjectTypeIds.CSharp)
             // ..."local" to the solution
-            .Where(pr => !pr.Location.StartsWith(".."))
+            .Where(pr => !pr.Location.StartsWith("..", StringComparison.Ordinal))
             .Select(pr => pr.GetProject())
             // ...all their compile items
             .SelectMany(p =>
@@ -187,6 +250,41 @@ FindAssemblyAttributeValue(string path, string attribute)
         }
     }
     return null;
+}
+
+
+static bool
+TrySetAssemblyAttributeValue(string path, string attribute, string value)
+{
+    var result = new List<string>();
+
+    var lineNumber = 0;
+    var found = false;
+    foreach (var line in File.ReadLines(path))
+    {
+        lineNumber++;
+
+        var match = Regex.Match(line, "^(\\s*)\\[assembly: " + attribute + "\\(\"[^\"]+\"\\)\\]\\s*$");
+        if (!match.Success)
+        {
+            result.Add(line);
+            continue;
+        }
+
+        if (found)
+            throw new UserException(new TextFileParseException(
+                FormattableString.Invariant($"Multiple {attribute} attributes in AssemblyInfo file"),
+                path, lineNumber, line));
+
+        var indent = match.Groups[1].Value;
+
+        result.Add(FormattableString.Invariant($"{indent}[assembly: {attribute}(\"{value}\")]"));
+
+        found = true;
+    }
+
+    if (found) File.WriteAllLines(path, result);
+    return found;
 }
 
 
