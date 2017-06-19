@@ -61,6 +61,8 @@ Main2(Queue<string> args)
             return Get(args);
         case "set":
             return Set(args);
+        case "increment":
+            return Increment(args);
         default:
             throw new UserException("Unrecognised command: " + command);
     }
@@ -118,6 +120,46 @@ Set(Queue<string> args)
     if (args.Count > 0) throw new UserException("Unexpected arguments");
 
     SetCommand.Set(repository, version);
+    return 0;
+}
+
+
+static int
+Increment(Queue<string> args)
+{
+    var repository = GetCurrentRepository();
+
+    bool major = false;
+    bool minor = false;
+    bool patch = false;
+    if (args.Count > 0)
+    {
+        var arg = args.Dequeue();
+        switch (arg)
+        {
+            case "--major":
+                major = true;
+                break;
+            case "--minor":
+                minor = true;
+                break;
+            case "--patch":
+                patch = true;
+                break;
+            default:
+                throw new UserException("Unrecognised argument: " + arg);
+        }
+    }
+    else
+    {
+        patch = true;
+    }
+    if (major && minor || major && patch || minor && patch)
+        throw new UserException("Expected one of --major, --minor, or --patch");
+
+    if (args.Count > 0) throw new UserException("Unexpected arguments");
+
+    IncrementCommand.Increment(repository, major, minor);
     return 0;
 }
 

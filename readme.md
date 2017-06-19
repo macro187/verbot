@@ -56,6 +56,11 @@ Commands
         The operation fails if at least one [AssemblyInformationalVersion]
         cannot be found to adjust.
 
+    increment [--patch]
+    increment --minor
+    increment --major
+        Increment to the next patch, minor, or major version
+
 
 License
 =======
