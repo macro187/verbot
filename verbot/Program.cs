@@ -131,33 +131,27 @@ Increment(Queue<string> args)
 
     bool major = false;
     bool minor = false;
-    bool patch = false;
-    if (args.Count > 0)
+    while (args.Count > 0)
     {
         var arg = args.Dequeue();
         switch (arg)
         {
             case "--major":
                 major = true;
+                minor = false;
                 break;
             case "--minor":
+                major = false;
                 minor = true;
                 break;
             case "--patch":
-                patch = true;
+                major = false;
+                minor = false;
                 break;
             default:
                 throw new UserException("Unrecognised argument: " + arg);
         }
     }
-    else
-    {
-        patch = true;
-    }
-    if (major && minor || major && patch || minor && patch)
-        throw new UserException("Expected one of --major, --minor, or --patch");
-
-    if (args.Count > 0) throw new UserException("Unexpected arguments");
 
     IncrementCommand.Increment(repository, major, minor);
     return 0;
