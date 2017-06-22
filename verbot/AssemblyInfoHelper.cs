@@ -11,7 +11,7 @@ verbot
 
 
 internal static class
-AssemblyInfo
+AssemblyInfoHelper
 {
 
 

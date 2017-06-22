@@ -101,7 +101,7 @@ Get(Queue<string> args)
 
     if (args.Count > 0) throw new UserException("Unexpected arguments");
 
-    var version = GetCommand.Get(repository);
+    var version = repository.GetVersion();
     Console.Out.WriteLine(version.ToString());
     return 0;
 }
@@ -119,7 +119,7 @@ Set(Queue<string> args)
 
     if (args.Count > 0) throw new UserException("Unexpected arguments");
 
-    SetCommand.Set(repository, version);
+    repository.SetVersion(version);
     return 0;
 }
 
@@ -153,7 +153,7 @@ Increment(Queue<string> args)
         }
     }
 
-    IncrementCommand.Increment(repository, major, minor);
+    repository.IncrementVersion(major, minor);
     return 0;
 }
 
