@@ -57,7 +57,7 @@ FindAssemblyInfoVersions(IEnumerable<string> assemblyInfos)
         assemblyInfos
             .Select(path => new {
                 Path = path,
-                Version = VerbotRepository.FindAssemblyAttributeValue(path, "AssemblyInformationalVersion") })
+                Version = AssemblyInfo.FindAssemblyAttributeValue(path, "AssemblyInformationalVersion") })
             .Where(aiv => aiv.Version != null)
             .Select(aiv => {
                 SemVersion version;

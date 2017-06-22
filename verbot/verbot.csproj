@@ -44,6 +44,7 @@
     <Compile Include="..\GlobalSuppressionsShared.cs">
       <Link>GlobalSuppressionsShared.cs</Link>
     </Compile>
+    <Compile Include="AssemblyInfo.cs" />
     <Compile Include="IncrementCommand.cs" />
     <Compile Include="SetCommand.cs" />
     <Compile Include="GetCommand.cs" />

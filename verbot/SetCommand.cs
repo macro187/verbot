@@ -33,7 +33,7 @@ Set(VerbotRepository repository, SemVersion version)
     foreach (var assemblyInfo in assemblyInfos)
     {
         if (
-            VerbotRepository.TrySetAssemblyAttributeValue(
+            AssemblyInfo.TrySetAssemblyAttributeValue(
                 assemblyInfo,
                 "AssemblyInformationalVersion",
                 version.ToString()))
@@ -47,8 +47,8 @@ Set(VerbotRepository repository, SemVersion version)
 
     foreach (var assemblyInfo in assemblyInfos)
     {
-        VerbotRepository.TrySetAssemblyAttributeValue(assemblyInfo, "AssemblyVersion", assemblyVersion);
-        VerbotRepository.TrySetAssemblyAttributeValue(assemblyInfo, "AssemblyFileVersion", assemblyFileVersion);
+        AssemblyInfo.TrySetAssemblyAttributeValue(assemblyInfo, "AssemblyVersion", assemblyVersion);
+        AssemblyInfo.TrySetAssemblyAttributeValue(assemblyInfo, "AssemblyFileVersion", assemblyFileVersion);
     }
 }
 
