@@ -45,6 +45,7 @@
       <Link>GlobalSuppressionsShared.cs</Link>
     </Compile>
     <Compile Include="AssemblyInfoFile.cs" />
+    <Compile Include="MasterBranchInfo.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="VerbotRepository.cs" />

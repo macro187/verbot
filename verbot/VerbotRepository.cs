@@ -8,8 +8,6 @@ using MacroSln;
 using MacroGuards;
 using Semver;
 using System.Diagnostics;
-using System.Globalization;
-using System.Text.RegularExpressions;
 
 
 namespace
@@ -246,66 +244,18 @@ FindAssemblyInfoFiles()
 
 
 /// <summary>
-/// Find all 'master' and 'MAJOR.MINOR-master' branches and the MAJOR.MINOR versions they track, in decreasing version
-/// order
+/// Find information about all 'master' and 'MAJOR.MINOR-master' branches
 /// </summary>
 ///
 IList<MasterBranchInfo>
 FindMasterBranches()
 {
-    var results = new List<MasterBranchInfo>();
-
-    var branches = GetBranches();
-    var currentBranch = GetBranch();
-    
-    var masterBranch = branches.Where(n => n == "master").FirstOrDefault();
-    if (masterBranch != null)
-    {
-        SemVersion masterVersion = null;
-        try
-        {
-            Checkout(masterBranch);
-            masterVersion = GetVersion();
-        }
-        finally
-        {
-            Checkout(currentBranch);
-        }
-        var masterMinorVersion = masterVersion.Change(null, null, 0, "", "");
-        results.Add(new MasterBranchInfo(masterBranch, masterMinorVersion));
-    }
-
-    results.AddRange(
-        branches
-            .Select(name => new {
-                Name = name,
-                Match = Regex.Match(name, @"^(\d+)\.(\d+)-master$") })
-            .Where(m => m.Match.Success)
-            .Select(m =>
-                new MasterBranchInfo(
-                    m.Name,
-                    new SemVersion(
-                        int.Parse(m.Match.Groups[1].Value, CultureInfo.InvariantCulture),
-                        int.Parse(m.Match.Groups[2].Value, CultureInfo.InvariantCulture)))));
-
-    results.Sort((x,y) => y.Version.CompareTo(x.Version));
-
-    return results;
-}
-
-
-class
-MasterBranchInfo
-{
-    public
-    MasterBranchInfo(GitCommitName name, SemVersion version)
-    {
-        Name = name;
-        Version = version;
-    }
-    public GitCommitName Name { get; }
-    public SemVersion Version { get; }
-    public override string ToString() => FormattableString.Invariant($"{Name} -> {Version.Major}.{Version.Minor}");
+    return
+        GetBranches()
+            .Where(name => MasterBranchInfo.IsMasterBranchName(name))
+            .Select(name => new MasterBranchInfo(this, name))
+            .OrderByDescending(b => b.Version)
+            .ToList();
 }
 
 
