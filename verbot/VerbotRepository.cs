@@ -43,23 +43,26 @@ Solution
 public SemVersion
 GetVersion()
 {
-    var assemblyInfos = FindAssemblyInfos();
-    if (assemblyInfos.Count == 0)
-        throw new UserException("No [AssemblyInformationalVersion] attributes found in solution");
+    var assemblyInfoFiles = FindAssemblyInfoFiles();
+    if (assemblyInfoFiles.Count == 0)
+        throw new UserException("No AssemblyInfo files found in solution");
 
     var distinctVersions =
-        assemblyInfos
-            .Select(aiv => aiv.Version)
-            .Where(aiv => aiv != null)
+        assemblyInfoFiles
+            .Select(f => f.FindVersion())
+            .Where(v => v != null)
             .Distinct()
             .ToList();
+
+    if (distinctVersions.Count == 0)
+        throw new UserException("No [AssemblyInformationalVersion] attributes found in solution");
 
     if (distinctVersions.Count > 1)
     {
         Trace.TraceInformation("[AssemblyInformationalVersion] attributes in solution");
-        foreach (var aiv in assemblyInfos)
+        foreach (var f in assemblyInfoFiles)
         {
-            Trace.TraceInformation("  {0} in {1}", aiv.Version, aiv.Path);
+            Trace.TraceInformation("  {0} in {1}", f.FindVersion(), f.Path);
         }
         throw new UserException("Conflicting [AssemblyInformationalVersion] attributes encountered");
     }
@@ -79,30 +82,23 @@ SetVersion(SemVersion version)
     var assemblyFileVersion = FormattableString.Invariant(
         $"{version.Major}.{version.Minor}.{version.Patch}.0");
 
-    var assemblyInfoPaths = FindAssemblyInfoPaths();
-    if (assemblyInfoPaths.Count == 0)
+    var assemblyInfoFiles = FindAssemblyInfoFiles();
+    if (assemblyInfoFiles.Count == 0)
         throw new UserException("No AssemblyInfo files found in solution");
 
     int count = 0;
-    foreach (var path in assemblyInfoPaths)
+    foreach (var f in assemblyInfoFiles)
     {
-        if (
-            AssemblyInfoHelper.TrySetAssemblyAttributeValue(
-                path,
-                "AssemblyInformationalVersion",
-                version.ToString()))
-        {
-            count++;
-        }
+        if (f.TrySetAssemblyAttributeValue("AssemblyInformationalVersion", version.ToString())) count++;
     }
 
     if (count == 0)
         throw new UserException("No [AssemblyInformationalVersion] attributes found in AssemblyInfo files");
 
-    foreach (var path in assemblyInfoPaths)
+    foreach (var f in assemblyInfoFiles)
     {
-        AssemblyInfoHelper.TrySetAssemblyAttributeValue(path, "AssemblyVersion", assemblyVersion);
-        AssemblyInfoHelper.TrySetAssemblyAttributeValue(path, "AssemblyFileVersion", assemblyFileVersion);
+        f.TrySetAssemblyAttributeValue("AssemblyVersion", assemblyVersion);
+        f.TrySetAssemblyAttributeValue("AssemblyFileVersion", assemblyFileVersion);
     }
 }
 
@@ -183,7 +179,7 @@ IncrementVersion(bool major, bool minor)
 
     if (major || minor)
     {
-        // (master branch) Leave a new MAJOR.MINOR-master branch behind for the current version
+        // If master branch, leave a new MAJOR.MINOR-master branch behind for the current version
         if (currentIsMaster)
         {
             var newBranchVersion = minorVersion;
@@ -199,7 +195,7 @@ IncrementVersion(bool major, bool minor)
             CreateBranch(newBranch);
         }
 
-        // (-master branch) Create and proceed on a new NEWMAJOR.NEWMINOR-master branch
+        // If -master branch, create and proceed on a new NEWMAJOR.NEWMINOR-master branch
         else
         {
             var newBranchVersion = newMinorVersion;
@@ -224,28 +220,8 @@ IncrementVersion(bool major, bool minor)
 }
 
 
-IList<AssemblyInfoInfo>
-FindAssemblyInfos()
-{
-    return
-        FindAssemblyInfoPaths()
-            .Select(path => new {
-                Path = path,
-                Version = AssemblyInfoHelper.FindAssemblyAttributeValue(path, "AssemblyInformationalVersion") })
-            .Where(aiv => aiv.Version != null)
-            .Select(aiv => {
-                SemVersion version;
-                if (!SemVersion.TryParse(aiv.Version, out version))
-                    throw new UserException(FormattableString.Invariant(
-                        $"[AssemblyInformationalVersion] in {aiv.Path} doesn't contain a valid semver"));
-                return new AssemblyInfoInfo(aiv.Path, version);
-            })
-            .ToList();
-}
-
-
-IList<string>
-FindAssemblyInfoPaths()
+IList<AssemblyInfoFile>
+FindAssemblyInfoFiles()
 {
     return
         // All projects
@@ -264,6 +240,7 @@ FindAssemblyInfoPaths()
             // ...and have "AssemblyInfo" in their name
             .Where(path => IOPath.GetFileNameWithoutExtension(path).Contains("AssemblyInfo"))
             .Distinct()
+            .Select(path => new AssemblyInfoFile(path))
             .ToList();
 }
 
@@ -314,21 +291,6 @@ FindMasterBranches()
     results.Sort((x,y) => y.Version.CompareTo(x.Version));
 
     return results;
-}
-
-
-class
-AssemblyInfoInfo
-{
-    public
-    AssemblyInfoInfo(string path, SemVersion version)
-    {
-        Guard.NotNull(path, nameof(path));
-        Path = path;
-        Version = version;
-    }
-    public string Path { get; }
-    public SemVersion Version { get; }
 }
 
 

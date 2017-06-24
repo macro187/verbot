@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using MacroExceptions;
+using MacroGuards;
+using Semver;
 
 
 namespace
@@ -10,15 +12,43 @@ verbot
 {
 
 
-internal static class
-AssemblyInfoHelper
+internal class
+AssemblyInfoFile
 {
 
 
-public static string
-FindAssemblyAttributeValue(string path, string attribute)
+public
+AssemblyInfoFile(string path)
 {
-    foreach (var line in File.ReadLines(path))
+    Guard.NotNull(path, nameof(path));
+    Path = path;
+}
+
+
+public string
+Path
+{
+    get;
+}
+
+
+public SemVersion
+FindVersion()
+{
+    var aiv = FindAssemblyAttributeValue("AssemblyInformationalVersion");
+    if (string.IsNullOrWhiteSpace(aiv)) return null;
+    SemVersion version;
+    if (!SemVersion.TryParse(aiv, out version))
+        throw new UserException(FormattableString.Invariant(
+            $"[AssemblyInformationalVersion] in {Path} doesn't contain a valid semver"));
+    return version;
+}
+
+
+public string
+FindAssemblyAttributeValue(string attribute)
+{
+    foreach (var line in File.ReadLines(Path))
     {
         var match = Regex.Match(line, "^\\s*\\[assembly: " + attribute + "\\(\"([^\"]+)\"\\)\\]\\s*$");
         if (match.Success)
@@ -30,14 +60,14 @@ FindAssemblyAttributeValue(string path, string attribute)
 }
 
 
-public static bool
-TrySetAssemblyAttributeValue(string path, string attribute, string value)
+public bool
+TrySetAssemblyAttributeValue(string attribute, string value)
 {
     var result = new List<string>();
 
     var lineNumber = 0;
     var found = false;
-    foreach (var line in File.ReadLines(path))
+    foreach (var line in File.ReadLines(Path))
     {
         lineNumber++;
 
@@ -51,7 +81,7 @@ TrySetAssemblyAttributeValue(string path, string attribute, string value)
         if (found)
             throw new UserException(new TextFileParseException(
                 FormattableString.Invariant($"Multiple {attribute} attributes in AssemblyInfo file"),
-                path, lineNumber, line));
+                Path, lineNumber, line));
 
         var indent = match.Groups[1].Value;
 
@@ -60,7 +90,7 @@ TrySetAssemblyAttributeValue(string path, string attribute, string value)
         found = true;
     }
 
-    if (found) File.WriteAllLines(path, result);
+    if (found) File.WriteAllLines(Path, result);
     return found;
 }
 
