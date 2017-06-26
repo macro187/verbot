@@ -101,86 +101,30 @@ SetVersion(SemVersion version)
 }
 
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage(
-    "Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity",
-    Justification = "Unclear how to refactor while maintaining clarity")]
-[System.Diagnostics.CodeAnalysis.SuppressMessage(
-    "Microsoft.Performance", "CA1820:TestForEmptyStringsUsingStringLength",
-    Justification = "Comparing to empty string communicates intention more clearly")]
 public void
 IncrementVersion(bool major, bool minor)
 {
-    var patch = !(major || minor);
+    CheckNoUncommittedChanges();
+    CheckMasterBranchIsTrackingHighestVersion();
+    CheckForReleaseOrMasterPrereleaseVersion();
+    CheckOnCorrectMasterBranchForVersion();
 
-    // Check for no uncommitted changes
-    if (HasUncommittedChanges())
-        throw new UserException("Uncommitted changes in repository");
-
-    // Get current version
-    var version = GetVersion();
-    var minorVersion = version.Change(null, null, 0, "", "");
-    var minorVersionString = FormattableString.Invariant($"{version.Major}.{version.Minor}");
-    var patchVersionString = FormattableString.Invariant($"{version.Major}.{version.Minor}.{version.Patch}");
-
-    // Check for release or -master prerelease
-    if (!(version.Prerelease == "" || version.Prerelease == "master"))
-        throw new UserException(
-            "Expected current version to be a release or -master prerelease, but found " + version.ToString());
-        
-    // Get branch information
+    var currentVersion = GetVersion();
+    var currentMinorVersion = currentVersion.Change(null, null, 0, "", "");
     var currentBranch = GetBranch();
-    var currentIsMaster = (currentBranch == "master");
+    var onMaster = (currentBranch == "master");
     var masterBranches = FindMasterBranches();
+    var nextVersion = CalculateNextVersion(major, minor);
+    var nextMinorVersion = nextVersion.Change(null, null, 0, "", "");
+    CheckNotAdvancingToLatestVersionOnNonMasterBranch(nextVersion);
+    CheckNotSkippingRelease(major, minor);
 
-    // Check that the master branch, if present, is tracking the highest version
-    if (masterBranches.Any(mb => mb.Name == "master") && masterBranches.First().Name != "master")
-        throw new UserException("Expected master branch to be tracking the latest version");
-
-    // Check that we're on the correct master branch for the current version
-    var expectedCurrentBranch = masterBranches.Where(mb => mb.Version == minorVersion).Select(mb => mb.Name).Single();
-    if (currentBranch != expectedCurrentBranch)
-        throw new UserException("Expected to be on branch " + expectedCurrentBranch);
-
-    // Check that we're not skipping over perfectly good unreleased versions
-    if (version.Prerelease == "master")
-    {
-        if (patch)
-            throw new UserException(FormattableString.Invariant(
-                $"No need to increment patch when {patchVersionString} hasn't been released yet"));
-        if (minor && version.Patch == 0)
-            throw new UserException(FormattableString.Invariant(
-                $"No need to increment minor when {patchVersionString} hasn't been released yet"));
-        if (major && version.Minor == 0 && version.Patch == 0)
-            throw new UserException(FormattableString.Invariant(
-                $"No need to increment major when {minorVersionString} hasn't been released yet"));
-    }
-
-    // Compute next version
-    var newVersion = version.Change(null, null, null, "master", "");
-    if (patch)
-    {
-        newVersion = newVersion.Change(null, null, newVersion.Patch + 1, null, null);
-    }
-    else if (minor)
-    {
-        newVersion = newVersion.Change(null, newVersion.Minor + 1, 0, null, null);
-    }
-    else if (major)
-    {
-        newVersion = newVersion.Change(newVersion.Major + 1, 0, 0, null, null);
-    }
-    var newMinorVersion = newVersion.Change(null, null, 0, "", "");
-
-    // Check that we're not trying to advance to the latest version from a branch other than master
-    if (newMinorVersion > masterBranches.First().Version && !currentIsMaster)
-        throw new UserException("Must be on master branch to advance to latest version");
-
+    // If incrementing major or minor, create and (if necessary) switch to new MAJOR.MINOR-master branch
     if (major || minor)
     {
-        // If master branch, leave a new MAJOR.MINOR-master branch behind for the current version
-        if (currentIsMaster)
+        if (onMaster)
         {
-            var newBranchVersion = minorVersion;
+            var newBranchVersion = currentMinorVersion;
 
             if (masterBranches.Any(mb => mb.Name != "master" && mb.Version == newBranchVersion))
                 throw new UserException(FormattableString.Invariant(
@@ -192,11 +136,10 @@ IncrementVersion(bool major, bool minor)
             Trace.TraceInformation("Creating branch " + newBranch);
             CreateBranch(newBranch);
         }
-
-        // If -master branch, create and proceed on a new NEWMAJOR.NEWMINOR-master branch
         else
         {
-            var newBranchVersion = newMinorVersion;
+            var newBranchVersion = nextMinorVersion;
+
             if (masterBranches.Any(mb => mb.Version == newBranchVersion))
                 throw new UserException(FormattableString.Invariant(
                     $"A master branch tracking {newBranchVersion.Major}.{newBranchVersion.Minor} already exists"));
@@ -210,11 +153,101 @@ IncrementVersion(bool major, bool minor)
         }
     }
 
-    // Advance to new version
-    Trace.TraceInformation("Incrementing to version " + newVersion.ToString() + " on branch " + GetBranch());
-    SetVersion(newVersion);
+    // Set version and commit
+    Trace.TraceInformation("Advancing to version " + nextVersion.ToString() + " on branch " + GetBranch());
+    SetVersion(nextVersion);
     StageChanges();
-    Commit(FormattableString.Invariant($"Increment to version {newVersion}"));
+    Commit(FormattableString.Invariant($"Advance to version {nextVersion}"));
+}
+
+
+void
+CheckNoUncommittedChanges()
+{
+    if (HasUncommittedChanges())
+        throw new UserException("Uncommitted changes in repository");
+}
+
+
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Microsoft.Performance", "CA1820:TestForEmptyStringsUsingStringLength",
+    Justification = "Comparing to empty string communicates intention more clearly")]
+void
+CheckForReleaseOrMasterPrereleaseVersion()
+{
+    var version = GetVersion();
+    if (!(version.Prerelease == "" || version.Prerelease == "master"))
+        throw new UserException("Expected current version to be a release or -master prerelease");
+}
+
+
+void
+CheckMasterBranchIsTrackingHighestVersion()
+{
+    var masterBranches = FindMasterBranches();
+    if (masterBranches.Any(mb => mb.Name == "master") && masterBranches.First().Name != "master")
+        throw new UserException("Expected master branch to be tracking the latest version");
+}
+
+
+void
+CheckOnCorrectMasterBranchForVersion()
+{
+    var minorVersion = GetVersion().Change(null, null, 0, "", "");
+    var expectedCurrentBranch =
+        FindMasterBranches()
+            .Where(mb => mb.Version == minorVersion)
+            .Select(mb => mb.Name)
+            .SingleOrDefault();
+    if (expectedCurrentBranch == null)
+        throw new UserException("No master branch found for current version");
+    if (GetBranch() != expectedCurrentBranch)
+        throw new UserException("Expected to be on branch " + expectedCurrentBranch);
+}
+
+
+void
+CheckNotSkippingRelease(bool major, bool minor)
+{
+    var patch = !(major || minor);
+    var version = GetVersion();
+    if (version.Prerelease != "master") return;
+    var patchString = FormattableString.Invariant($"{version.Major}.{version.Minor}.{version.Patch}");
+    var minorString = FormattableString.Invariant($"{version.Major}.{version.Minor}");
+    if (patch)
+        throw new UserException(FormattableString.Invariant(
+            $"No need to increment patch when {patchString} hasn't been released yet"));
+    if (minor && version.Patch == 0)
+        throw new UserException(FormattableString.Invariant(
+            $"No need to increment minor when {patchString} hasn't been released yet"));
+    if (major && version.Minor == 0 && version.Patch == 0)
+        throw new UserException(FormattableString.Invariant(
+            $"No need to increment major when {minorString} hasn't been released yet"));
+}
+
+
+SemVersion
+CalculateNextVersion(bool major, bool minor)
+{
+    var v = GetVersion().Change(null, null, null, "master", "");
+    return
+        major ?
+            v.Change(v.Major + 1, 0, 0, null, null)
+        : minor ?
+            v.Change(null, v.Minor + 1, 0, null, null)
+        :
+            v.Change(null, null, v.Patch + 1, null, null);
+}
+
+
+void
+CheckNotAdvancingToLatestVersionOnNonMasterBranch(SemVersion newVersion)
+{
+    var masterBranches = FindMasterBranches();
+    if (masterBranches.Count == 0) return;
+    var newMinorVersion = newVersion.Change(null, null, 0, "", "");
+    if (newMinorVersion > masterBranches.First().Version && GetBranch() != "master")
+        throw new UserException("Must be on master branch to advance to latest version");
 }
 
 
@@ -244,7 +277,7 @@ FindAssemblyInfoFiles()
 
 
 /// <summary>
-/// Find information about all 'master' and 'MAJOR.MINOR-master' branches
+/// Find information about all 'master' and 'MAJOR.MINOR-master' branches, in decreasing order of tracked minor version
 /// </summary>
 ///
 IList<MasterBranchInfo>
