@@ -154,10 +154,11 @@ IncrementVersion(bool major, bool minor)
     }
 
     // Set version and commit
-    Trace.TraceInformation("Advancing to version " + nextVersion.ToString() + " on branch " + GetBranch());
+    var incrementedComponent = major ? "major" : minor ? "minor" : "patch";
+    Trace.TraceInformation(FormattableString.Invariant(
+        $"Incrementing {incrementedComponent} version to {nextVersion} and committing"));
     SetVersion(nextVersion);
     StageChanges();
-    var incrementedComponent = major ? "major" : minor ? "minor" : "patch";
     Commit(FormattableString.Invariant($"Increment {incrementedComponent} version to {nextVersion}"));
 }
 
@@ -173,15 +174,18 @@ Release()
 
     // Commit release version change
     var version = GetVersion().Change(null, null, null, "", "");
+    Trace.TraceInformation(FormattableString.Invariant($"Setting version to {version} and committing"));
     SetVersion(version);
     StageChanges();
     Commit(FormattableString.Invariant($"Release version {version.ToString()}"));
 
     // MAJOR.MINOR.PATCH tag
+    Trace.TraceInformation("Tagging " + version.ToString());
     CreateTag(new GitCommitName(version.ToString()));
 
     // MAJOR.MINOR-latest branch
     var majorMinorLatestBranch = FormattableString.Invariant($"{version.Major}.{version.Minor}-latest");
+    Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorMinorLatestBranch}"));
     CreateOrMoveBranch(new GitCommitName(majorMinorLatestBranch));
 
     // MAJOR-latest branch
@@ -192,6 +196,7 @@ Release()
     if (isLatestMajorMinorLatestBranch)
     {
         var majorLatestBranch = FormattableString.Invariant($"{version.Major}-latest");
+        Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorLatestBranch}"));
         CreateOrMoveBranch(new GitCommitName(majorLatestBranch));
     }
 
