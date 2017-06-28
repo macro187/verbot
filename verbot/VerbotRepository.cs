@@ -157,7 +157,8 @@ IncrementVersion(bool major, bool minor)
     Trace.TraceInformation("Advancing to version " + nextVersion.ToString() + " on branch " + GetBranch());
     SetVersion(nextVersion);
     StageChanges();
-    Commit(FormattableString.Invariant($"Advance to version {nextVersion}"));
+    var incrementedComponent = major ? "major" : minor ? "minor" : "patch";
+    Commit(FormattableString.Invariant($"Increment {incrementedComponent} version to {nextVersion}"));
 }
 
 
@@ -174,7 +175,7 @@ Release()
     var version = GetVersion().Change(null, null, null, "", "");
     SetVersion(version);
     StageChanges();
-    Commit(version.ToString());
+    Commit(FormattableString.Invariant($"Release version {version.ToString()}"));
 
     // MAJOR.MINOR.PATCH tag
     CreateTag(new GitCommitName(version.ToString()));
