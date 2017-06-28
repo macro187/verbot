@@ -63,6 +63,8 @@ Main2(Queue<string> args)
             return Set(args);
         case "increment":
             return Increment(args);
+        case "release":
+            return Release(args);
         default:
             throw new UserException("Unrecognised command: " + command);
     }
@@ -154,6 +156,16 @@ Increment(Queue<string> args)
     }
 
     repository.IncrementVersion(major, minor);
+    return 0;
+}
+
+
+static int
+Release(Queue<string> args)
+{
+    if (args.Count > 0) throw new UserException("Unexpected arguments");
+    var repository = GetCurrentRepository();
+    repository.Release();
     return 0;
 }
 

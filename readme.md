@@ -88,6 +88,22 @@ Commands
         The operation fails if creating a new 'MAJOR.MINOR-master' branch is
         necessary but such a branch already exists.
 
+    release
+        Release the version being developed on a master or -master branch
+
+        Specifically:
+
+        -   Remove the prerelease and build components from the current
+            version, and commit
+
+        -   Tag with `MAJOR.MINOR.PATCH`
+
+        -   Create or move the `MAJOR.MINOR-latest` branch
+
+        -   Create or move the `MAJOR-latest` branch, if appropriate
+
+        -   Increment to the next patch -master version, and commit
+
 
 License
 =======

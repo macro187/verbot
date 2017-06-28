@@ -106,7 +106,7 @@ IncrementVersion(bool major, bool minor)
 {
     CheckNoUncommittedChanges();
     CheckMasterBranchIsTrackingHighestVersion();
-    CheckForReleaseOrMasterPrereleaseVersion();
+    CheckVersionIsReleaseOrMasterPrerelease();
     CheckOnCorrectMasterBranchForVersion();
 
     var currentVersion = GetVersion();
@@ -161,6 +161,44 @@ IncrementVersion(bool major, bool minor)
 }
 
 
+public void
+Release()
+{
+    CheckNoUncommittedChanges();
+    CheckMasterBranchIsTrackingHighestVersion();
+    CheckVersionIsMasterPrerelease();
+    CheckOnCorrectMasterBranchForVersion();
+    CheckVersionHasNotBeenReleased();
+
+    // Commit release version change
+    var version = GetVersion().Change(null, null, null, "", "");
+    SetVersion(version);
+    StageChanges();
+    Commit(version.ToString());
+
+    // MAJOR.MINOR.PATCH tag
+    CreateTag(new GitCommitName(version.ToString()));
+
+    // MAJOR.MINOR-latest branch
+    var majorMinorLatestBranch = FormattableString.Invariant($"{version.Major}.{version.Minor}-latest");
+    CreateOrMoveBranch(new GitCommitName(majorMinorLatestBranch));
+
+    // MAJOR-latest branch
+    var minorVersion = version.Change(null, null, 0, "", "");
+    var latestMajorMinorLatestBranch =
+        FindMajorMinorLatestBranches().Where(b => b.Version.Major == version.Major).First();
+    var isLatestMajorMinorLatestBranch = minorVersion >= latestMajorMinorLatestBranch.Version;
+    if (isLatestMajorMinorLatestBranch)
+    {
+        var majorLatestBranch = FormattableString.Invariant($"{version.Major}-latest");
+        CreateOrMoveBranch(new GitCommitName(majorLatestBranch));
+    }
+
+    // Increment to next patch version
+    IncrementVersion(false, false);
+}
+
+
 void
 CheckNoUncommittedChanges()
 {
@@ -169,11 +207,29 @@ CheckNoUncommittedChanges()
 }
 
 
+void
+CheckVersionHasNotBeenReleased()
+{
+    var releaseVersion = GetVersion().Change(null, null, null, "", "");
+    if (GetTags().Contains(new GitCommitName(releaseVersion.ToString())))
+        throw new UserException("Current version has already been released");
+}
+
+
+void
+CheckVersionIsMasterPrerelease()
+{
+    var version = GetVersion();
+    if (version.Prerelease != "master")
+        throw new UserException("Expected current version to be a -master prerelease");
+}
+
+
 [System.Diagnostics.CodeAnalysis.SuppressMessage(
     "Microsoft.Performance", "CA1820:TestForEmptyStringsUsingStringLength",
     Justification = "Comparing to empty string communicates intention more clearly")]
 void
-CheckForReleaseOrMasterPrereleaseVersion()
+CheckVersionIsReleaseOrMasterPrerelease()
 {
     var version = GetVersion();
     if (!(version.Prerelease == "" || version.Prerelease == "master"))
@@ -290,6 +346,23 @@ FindMasterBranches()
             .OrderByDescending(b => b.Version)
             .ToList();
 }
+
+
+/// <summary>
+/// Find information about all 'MAJOR.MINOR-latest' branches, in decreasing version order
+/// </summary>
+///
+IList<MajorMinorLatestBranchInfo>
+FindMajorMinorLatestBranches()
+{
+    return
+        GetBranches()
+            .Where(name => MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(name))
+            .Select(name => new MajorMinorLatestBranchInfo(this, name))
+            .OrderByDescending(b => b.Version)
+            .ToList();
+}
+
 
 
 }
