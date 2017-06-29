@@ -102,7 +102,10 @@ Commands
 
         -   Create or move the `MAJOR-latest` branch, if appropriate
 
-        -   Increment to the next patch -master version, and commit
+        -   Create or move the `latest` branch, if appropriate
+
+        -   Increment to the next patch version, add the -master prerelease
+            version component, and commit
 
 
 License

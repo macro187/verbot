@@ -172,23 +172,23 @@ Release()
     CheckOnCorrectMasterBranchForVersion();
     CheckVersionHasNotBeenReleased();
 
-    // Commit release version change
+    // Set release version and commit
     var version = GetVersion().Change(null, null, null, "", "");
     Trace.TraceInformation(FormattableString.Invariant($"Setting version to {version} and committing"));
     SetVersion(version);
     StageChanges();
     Commit(FormattableString.Invariant($"Release version {version.ToString()}"));
 
-    // MAJOR.MINOR.PATCH tag
+    // Tag MAJOR.MINOR.PATCH
     Trace.TraceInformation("Tagging " + version.ToString());
     CreateTag(new GitCommitName(version.ToString()));
 
-    // MAJOR.MINOR-latest branch
+    // Set MAJOR.MINOR-latest branch
     var majorMinorLatestBranch = FormattableString.Invariant($"{version.Major}.{version.Minor}-latest");
     Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorMinorLatestBranch}"));
     CreateOrMoveBranch(new GitCommitName(majorMinorLatestBranch));
 
-    // MAJOR-latest branch
+    // Set MAJOR-latest branch
     var minorVersion = version.Change(null, null, 0, "", "");
     var latestMajorMinorLatestBranch =
         FindMajorMinorLatestBranches().Where(b => b.Version.Major == version.Major).First();
@@ -198,6 +198,16 @@ Release()
         var majorLatestBranch = FormattableString.Invariant($"{version.Major}-latest");
         Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorLatestBranch}"));
         CreateOrMoveBranch(new GitCommitName(majorLatestBranch));
+    }
+
+    // Set latest branch
+    var majorVersion = version.Change(null, 0, 0, "", "");
+    var latestMajorLatestBranch = FindMajorLatestBranches().First();
+    var isLatestMajorLatestBranch = majorVersion >= latestMajorLatestBranch.Version;
+    if (isLatestMajorMinorLatestBranch && isLatestMajorLatestBranch)
+    {
+        Trace.TraceInformation(FormattableString.Invariant($"Setting branch latest"));
+        CreateOrMoveBranch(new GitCommitName("latest"));
     }
 
     // Increment to next patch version
@@ -349,6 +359,22 @@ FindMasterBranches()
         GetBranches()
             .Where(name => MasterBranchInfo.IsMasterBranchName(name))
             .Select(name => new MasterBranchInfo(this, name))
+            .OrderByDescending(b => b.Version)
+            .ToList();
+}
+
+
+/// <summary>
+/// Find information about all 'MAJOR-latest' branches, in decreasing version order
+/// </summary>
+///
+IList<MajorLatestBranchInfo>
+FindMajorLatestBranches()
+{
+    return
+        GetBranches()
+            .Where(name => MajorLatestBranchInfo.IsMajorLatestBranchName(name))
+            .Select(name => new MajorLatestBranchInfo(this, name))
             .OrderByDescending(b => b.Version)
             .ToList();
 }
