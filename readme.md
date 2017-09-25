@@ -14,7 +14,7 @@ Synopsis
 Description
 ===========
 
-    verbot operates according to a string view of how version numbering should
+    verbot operates according to a strict view of how version numbering should
     work.
 
     Version number formats and rules are according to the Semantic Versioning
