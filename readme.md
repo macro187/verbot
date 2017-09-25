@@ -1,8 +1,8 @@
 verbot
 ======
 
-    Tool for managing C# software version numbers using Semantic Versioning and
-    Git
+    A tool for managing version numbers using Semantic Versioning, assembly
+    attributes, and Git
 
 
 Synopsis
@@ -14,15 +14,53 @@ Synopsis
 Description
 ===========
 
-    verbot works with Git repositories containing single Visual Studio
-    solutions.
+    verbot operates according to a string view of how version numbering should
+    work.
+
+    Version number formats and rules are according to the Semantic Versioning
+    specification <http://semver.org/>.
+
+    >   This overrules everyone else including Microsoft
 
     Version numbers apply across entire Git repositories.
 
-    verbot operates according to Semantic Versioning rules and version number
-    formats.
+    Git repositories contain single Visual Studio solutions.
 
-    Operations affect the repository that the current working directory is in.
+    The current version number is stored in Semantic Versioning format in at
+    least one [AssemblyInformationalVersion] attribute in an *AssemblyInfo*.cs
+    file in a project that is both in the solution and in the repository.  If
+    more than one such attribute exists, they all contain the same version.
+
+    [AssemblyVersion] attributes contain a four-part .NET version number
+    consisting of the current major version plus three zeroes e.g. "1.0.0.0"
+
+    >   This reflects backward-compatibility within major versions
+
+    [AssemblyFileVersion] attributes contain a four-part .NET version number
+    consisting of the current major, minor, and patch versions plus a zero
+    e.g. "1.1.1.0"
+
+    >   This is the closest a .NET version number can get to a full Semantic
+    >   Version
+
+    Development proceeds toward releases on master branches.  There are master
+    branches for all possible future major-minor releases.  The master branch
+    proceeding towards the highest precedence (or "latest") release is named
+    "master".  Master branches proceeding towards all other releases are named
+    according to the MAJOR.MINOR version plus a -master suffix e.g.
+    "1.1-master"
+
+    >   This enables concurrent development and maintenance of any number of
+    >   MAJOR.MINOR versions of the software
+
+    During development, the current version number is the version of the
+    release being worked toward plus a -master pre-release suffix e.g.
+    "1.2.3-master"
+
+    TODO Releases
+
+    verbot operations affect the repository that the current working directory
+    is in.
 
 
 Commands
