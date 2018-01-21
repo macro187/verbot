@@ -4,7 +4,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using MacroExceptions;
 using MacroGuards;
-using Semver;
+using MacroSemver;
 
 
 namespace

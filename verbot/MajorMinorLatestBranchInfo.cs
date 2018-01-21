@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using MacroGit;
 using MacroGuards;
-using Semver;
+using MacroSemver;
 
 
 namespace

@@ -1,6 +1,8 @@
-https://github.com/macro187/macro-sharp.git#master
-https://github.com/macro187/macro-sharp-git.git#master
-https://github.com/macro187/macro-sharp-sln.git#master
-https://github.com/macro187/macro-sharp-console.git#master
-https://github.com/macro187/semver.git#nugit
+https://github.com/macro187/MacroConsole.git
+https://github.com/macro187/MacroExceptions.git
+https://github.com/macro187/MacroGit.git
+https://github.com/macro187/MacroGuards.git
+https://github.com/macro187/MacroIO.git
+https://github.com/macro187/MacroSemver.git
+https://github.com/macro187/MacroSln.git
 

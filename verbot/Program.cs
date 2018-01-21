@@ -7,7 +7,7 @@ using System.Reflection;
 using MacroIO;
 using MacroConsole;
 using MacroGit;
-using Semver;
+using MacroSemver;
 
 
 namespace

@@ -4,9 +4,9 @@ using System.Linq;
 using IOPath = System.IO.Path;
 using MacroExceptions;
 using MacroGit;
-using MacroSln;
 using MacroGuards;
-using Semver;
+using MacroSemver;
+using MacroSln;
 using System.Diagnostics;
 
 
