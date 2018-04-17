@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using IOPath = System.IO.Path;
 using MacroExceptions;
 using MacroGit;
 using MacroGuards;
@@ -25,9 +24,9 @@ public
 VerbotRepository(string path)
     : base(path)
 {
-    var sln = VisualStudioSolution.Find(Path);
-    if (sln == null) throw new UserException("No Visual Studio solution found in repository");
-    Solution = sln;
+    Solution =
+        VisualStudioSolution.Find(Path)
+        ?? throw new UserException("No Visual Studio solution found in repository");
 }
 
 
@@ -41,28 +40,29 @@ Solution
 public SemVersion
 GetVersion()
 {
-    var assemblyInfoFiles = FindAssemblyInfoFiles();
-    if (assemblyInfoFiles.Count == 0)
-        throw new UserException("No AssemblyInfo files found in solution");
+    var projects = FindProjects();
+    if (projects.Count == 0)
+        throw new UserException("No projects found in solution");
 
     var distinctVersions =
-        assemblyInfoFiles
-            .Select(f => f.FindVersion())
-            .Where(v => v != null)
+        projects
+            .Select(p => p.GetProperty("Version"))
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => SemVersion.Parse(s))
             .Distinct()
             .ToList();
 
     if (distinctVersions.Count == 0)
-        throw new UserException("No [AssemblyInformationalVersion] attributes found in solution");
+        throw new UserException("No Version properties found in projects");
 
     if (distinctVersions.Count > 1)
     {
-        Trace.TraceInformation("[AssemblyInformationalVersion] attributes in solution");
-        foreach (var f in assemblyInfoFiles)
+        Trace.TraceInformation("Versions in projects");
+        foreach (var p in projects)
         {
-            Trace.TraceInformation("  {0} in {1}", f.FindVersion(), f.Path);
+            Trace.TraceInformation("  {0} in {1}", p.GetProperty("Version"), p.Path);
         }
-        throw new UserException("Conflicting [AssemblyInformationalVersion] attributes encountered");
+        throw new UserException("Conflicting Versions encountered in projects");
     }
 
     return distinctVersions.Single();
@@ -80,23 +80,16 @@ SetVersion(SemVersion version)
     var assemblyFileVersion = FormattableString.Invariant(
         $"{version.Major}.{version.Minor}.{version.Patch}.0");
 
-    var assemblyInfoFiles = FindAssemblyInfoFiles();
-    if (assemblyInfoFiles.Count == 0)
-        throw new UserException("No AssemblyInfo files found in solution");
+    var projects = FindProjects();
+    if (projects.Count == 0)
+        throw new UserException("No projects found in solution");
 
-    int count = 0;
-    foreach (var f in assemblyInfoFiles)
+    foreach (var p in projects)
     {
-        if (f.TrySetAssemblyAttributeValue("AssemblyInformationalVersion", version.ToString())) count++;
-    }
-
-    if (count == 0)
-        throw new UserException("No [AssemblyInformationalVersion] attributes found in AssemblyInfo files");
-
-    foreach (var f in assemblyInfoFiles)
-    {
-        f.TrySetAssemblyAttributeValue("AssemblyVersion", assemblyVersion);
-        f.TrySetAssemblyAttributeValue("AssemblyFileVersion", assemblyFileVersion);
+        p.SetProperty("Version", version.ToString());
+        p.SetProperty("AssemblyFileVersion", assemblyFileVersion);
+        p.SetProperty("AssemblyVersion", assemblyVersion);
+        p.Save();
     }
 }
 
@@ -323,27 +316,19 @@ CheckNotAdvancingToLatestVersionOnNonMasterBranch(SemVersion newVersion)
 }
 
 
-IList<AssemblyInfoFile>
-FindAssemblyInfoFiles()
+IList<VisualStudioProject>
+FindProjects()
 {
     return
         // All projects
         Solution.ProjectReferences
             // ...that are C# projects
-            .Where(pr => pr.TypeId == VisualStudioProjectTypeIds.CSharp)
+            .Where(pr =>
+                pr.TypeId == VisualStudioProjectTypeIds.CSharp ||
+                pr.TypeId == VisualStudioProjectTypeIds.CSharpNew)
             // ..."local" to the solution
             .Where(pr => !pr.Location.StartsWith("..", StringComparison.Ordinal))
             .Select(pr => pr.GetProject())
-            // ...all their compile items
-            .SelectMany(p =>
-                p.CompileItems.Select(path =>
-                    IOPath.GetFullPath(IOPath.Combine(IOPath.GetDirectoryName(p.Path), path))))
-            // ...that are .cs files
-            .Where(path => IOPath.GetExtension(path) == ".cs")
-            // ...and have "AssemblyInfo" in their name
-            .Where(path => IOPath.GetFileNameWithoutExtension(path).Contains("AssemblyInfo"))
-            .Distinct()
-            .Select(path => new AssemblyInfoFile(path))
             .ToList();
 }
 

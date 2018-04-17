@@ -1,8 +1,8 @@
 verbot
 ======
 
-A tool for managing version numbers using Semantic Versioning, assembly
-attributes, and Git
+A tool for managing version numbers for C# projects using Semantic Versioning
+and Git
 
 
 Synopsis
@@ -28,17 +28,19 @@ Version numbers apply across entire Git repositories.
 
 Git repositories contain single Visual Studio solutions.
 
-The current version number is stored in Semantic Versioning format in at least
-one [AssemblyInformationalVersion] attribute in an *AssemblyInfo*.cs file in a
-project that is both in the solution and in the repository.  If more than one
-such attribute exists, they all contain the same version.
+Version information is stored in properties in projects that are both in the
+solution and in the repository.  If more than one such project exists, they
+all contain the same version.
 
-[AssemblyVersion] attributes contain a four-part .NET version number
+`Version` properties contain the full version number in Semantic Versioning
+format.
+
+`AssemblyVersion` properties contain a four-part .NET version number
 consisting of the current major version plus three zeroes e.g. "1.0.0.0"
 
 >   This reflects backward-compatibility within major versions
 
-[AssemblyFileVersion] attributes contain a four-part .NET version number
+`AssemblyFileVersion` properties contain a four-part .NET version number
 consisting of the current major, minor, and patch versions plus a zero e.g.
 "1.1.1.0"
 
@@ -73,27 +75,22 @@ help
 get
     Get the current version number
 
-    The version number is read from [AssemblyInformationalVersion]
-    attributes in AssemblyInfo files.
+    The version number is read from `Version` properties in project files.
 
-    The operation fails if no [AssemblyInformationalVersion] attributes are
-    found, or if they contain conflicting version numbers.
+    The operation fails if no `Version` properties are found, or if they
+    contain conflicting version numbers.
 
 set <version>
     Set the current version number
 
-    The version number is set by adjusting various assembly version
-    attributes:
+    The version number is set by adjusting various project version
+    properties:
 
-        [AssemblyVersion]s are set to MAJOR.0.0.0
+        `Version`s are set to the full semantic version number
 
-        [AssemblyFileVersion]s are set to MAJOR.MINOR.PATCH.0
+        `AssemblyFileVersion`s are set to MAJOR.MINOR.PATCH.0
 
-        [AssemblyInformationalVersion]s are set to the full semantic version
-        number
-
-    The operation fails if at least one [AssemblyInformationalVersion]
-    cannot be found to adjust.
+        `AssemblyVersion`s are set to MAJOR.0.0.0
 
 increment --major
 increment --minor
