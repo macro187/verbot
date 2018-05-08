@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="..\readme.md" Link="readme.md" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\MacroConsole\MacroConsole\MacroConsole.csproj" />
     <ProjectReference Include="..\..\MacroDiagnostics\MacroDiagnostics\MacroDiagnostics.csproj" />
     <ProjectReference Include="..\..\MacroExceptions\MacroExceptions\MacroExceptions.csproj" />
