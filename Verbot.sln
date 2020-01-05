@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2020
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "verbot", "verbot\verbot.csproj", "{FFB3287D-6F68-4844-802A-84D6366036FB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Verbot", "Verbot\Verbot.csproj", "{FFB3287D-6F68-4844-802A-84D6366036FB}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{798DBA10-7026-4EB9-BB8D-DF67ABC51221}"
 	ProjectSection(SolutionItems) = preProject

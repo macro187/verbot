@@ -7,7 +7,7 @@ using MacroSemver;
 
 
 namespace
-verbot
+Verbot
 {
 
 

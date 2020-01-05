@@ -1,2 +1,2 @@
-program: verbot/bin/Debug/netcoreapp2.0/publish/verbot.dll
+program: Verbot/bin/Debug/netcoreapp2.0/publish/verbot.dll
 

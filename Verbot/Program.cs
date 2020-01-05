@@ -11,7 +11,7 @@ using MacroSemver;
 
 
 namespace
-verbot
+Verbot
 {
 
 
@@ -77,7 +77,7 @@ Help(Queue<string> args)
     if (args.Count > 0) throw new UserException("Unexpected arguments");
 
     Trace.TraceInformation("");
-    using (var reader = new StreamReader(Assembly.GetCallingAssembly().GetManifestResourceStream("verbot.readme.md")))
+    using (var reader = new StreamReader(Assembly.GetCallingAssembly().GetManifestResourceStream("Verbot.readme.md")))
     {
         foreach (
             var line
