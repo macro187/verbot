@@ -5,12 +5,14 @@ A tool for managing version numbers for C# projects using Semantic Versioning
 and Git
 
 
+
 Synopsis
 ========
 
 ```
 verbot <command> [<arguments>]
 ```
+
 
 
 Description
@@ -63,6 +65,7 @@ TODO Releases
 
 verbot operations affect the repository that the current working directory is
 in.
+
 
 
 Commands
@@ -145,15 +148,17 @@ release
 ```
 
 
+
 License
 =======
 
 MIT License <https://github.com/macro187/verbot/blob/master/license.txt>
 
 
+
 Copyright
 =========
 
-Copyright (c) 2017-2018  
+Copyright (c) 2017-2020  
 Ron MacNeil <https://github.com/macro187>
 
