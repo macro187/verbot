@@ -45,6 +45,8 @@ namespace Verbot
             {
                 case "help":
                     return Help(args);
+                case "check":
+                    return Check(args);
                 case "get":
                     return Get(args);
                 case "set":
@@ -79,6 +81,18 @@ namespace Verbot
                     Trace.TraceInformation(line);
                 }
             }
+
+            return 0;
+        }
+
+
+        static int Check(Queue<string> args)
+        {
+            var repository = GetCurrentRepository();
+
+            if (args.Count > 0) throw new UserException("Unexpected arguments");
+
+            repository.CheckLocal();
 
             return 0;
         }

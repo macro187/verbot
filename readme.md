@@ -75,6 +75,15 @@ Commands
 help
     Display usage information
 
+check
+	Check basic assumptions about the repsitory required for verbot to operate.
+
+	Specifically:
+		There is at least one place in the repository to record the current
+		version.
+
+		Different versions are not recorded in different places.
+
 get
     Get the current version number
 

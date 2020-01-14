@@ -24,63 +24,63 @@ namespace Verbot
         public VisualStudioSolution Solution { get; }
 
 
-        public SemVersion GetVersion()
+        public void Release()
         {
-            var projects = FindProjects();
-            if (projects.Count == 0)
-                throw new UserException("No projects found in solution");
+            CheckLocal();
 
-            var distinctVersions =
-                projects
-                    .Select(p => p.GetProperty("Version"))
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Select(s => SemVersion.Parse(s))
-                    .Distinct()
-                    .ToList();
+            CheckNoUncommittedChanges();
+            CheckMasterBranchIsTrackingHighestVersion();
+            CheckVersionIsMasterPrerelease();
+            CheckOnCorrectMasterBranchForVersion();
+            CheckVersionHasNotBeenReleased();
 
-            if (distinctVersions.Count == 0)
-                throw new UserException("No Version properties found in projects");
+            // Set release version and commit
+            var version = GetVersion().Change(null, null, null, "", "");
+            Trace.TraceInformation(FormattableString.Invariant($"Setting version to {version} and committing"));
+            SetVersion(version);
+            StageChanges();
+            Commit(FormattableString.Invariant($"Release version {version.ToString()}"));
 
-            if (distinctVersions.Count > 1)
+            // Tag MAJOR.MINOR.PATCH
+            Trace.TraceInformation("Tagging " + version.ToString());
+            CreateTag(new GitCommitName(version.ToString()));
+
+            // Set MAJOR.MINOR-latest branch
+            var majorMinorLatestBranch = FormattableString.Invariant($"{version.Major}.{version.Minor}-latest");
+            Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorMinorLatestBranch}"));
+            CreateOrMoveBranch(new GitCommitName(majorMinorLatestBranch));
+
+            // Set MAJOR-latest branch
+            var minorVersion = version.Change(null, null, 0, "", "");
+            var latestMajorMinorLatestBranch =
+                FindMajorMinorLatestBranches().Where(b => b.Version.Major == version.Major).First();
+            var isLatestMajorMinorLatestBranch = minorVersion >= latestMajorMinorLatestBranch.Version;
+            if (isLatestMajorMinorLatestBranch)
             {
-                Trace.TraceInformation("Versions in projects");
-                foreach (var p in projects)
-                {
-                    Trace.TraceInformation("  {0} in {1}", p.GetProperty("Version"), p.Path);
-                }
-                throw new UserException("Conflicting Versions encountered in projects");
+                var majorLatestBranch = FormattableString.Invariant($"{version.Major}-latest");
+                Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorLatestBranch}"));
+                CreateOrMoveBranch(new GitCommitName(majorLatestBranch));
             }
 
-            return distinctVersions.Single();
-        }
-
-
-        public void SetVersion(SemVersion version)
-        {
-            Guard.NotNull(version, nameof(version));
-
-            var assemblyVersion = FormattableString.Invariant(
-                $"{version.Major}.0.0.0");
-
-            var assemblyFileVersion = FormattableString.Invariant(
-                $"{version.Major}.{version.Minor}.{version.Patch}.0");
-
-            var projects = FindProjects();
-            if (projects.Count == 0)
-                throw new UserException("No projects found in solution");
-
-            foreach (var p in projects)
+            // Set latest branch
+            var majorVersion = version.Change(null, 0, 0, "", "");
+            var latestMajorLatestBranch = FindMajorLatestBranches().First();
+            var isLatestMajorLatestBranch = majorVersion >= latestMajorLatestBranch.Version;
+            if (isLatestMajorMinorLatestBranch && isLatestMajorLatestBranch)
             {
-                p.SetProperty("Version", version.ToString());
-                p.SetProperty("AssemblyFileVersion", assemblyFileVersion);
-                p.SetProperty("AssemblyVersion", assemblyVersion);
-                p.Save();
+                Trace.TraceInformation(FormattableString.Invariant($"Setting branch latest"));
+                CreateOrMoveBranch(new GitCommitName("latest"));
             }
+
+            // Increment to next patch version
+            IncrementVersion(false, false);
         }
 
 
         public void IncrementVersion(bool major, bool minor)
         {
+            CheckLocal();
+
             CheckNoUncommittedChanges();
             CheckMasterBranchIsTrackingHighestVersion();
             CheckVersionIsReleaseOrMasterPrerelease();
@@ -140,54 +140,108 @@ namespace Verbot
         }
 
 
-        public void Release()
+        public void SetVersion(SemVersion version)
         {
-            CheckNoUncommittedChanges();
-            CheckMasterBranchIsTrackingHighestVersion();
-            CheckVersionIsMasterPrerelease();
-            CheckOnCorrectMasterBranchForVersion();
-            CheckVersionHasNotBeenReleased();
+            Guard.NotNull(version, nameof(version));
 
-            // Set release version and commit
-            var version = GetVersion().Change(null, null, null, "", "");
-            Trace.TraceInformation(FormattableString.Invariant($"Setting version to {version} and committing"));
-            SetVersion(version);
-            StageChanges();
-            Commit(FormattableString.Invariant($"Release version {version.ToString()}"));
+            CheckForVersionLocations();
 
-            // Tag MAJOR.MINOR.PATCH
-            Trace.TraceInformation("Tagging " + version.ToString());
-            CreateTag(new GitCommitName(version.ToString()));
-
-            // Set MAJOR.MINOR-latest branch
-            var majorMinorLatestBranch = FormattableString.Invariant($"{version.Major}.{version.Minor}-latest");
-            Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorMinorLatestBranch}"));
-            CreateOrMoveBranch(new GitCommitName(majorMinorLatestBranch));
-
-            // Set MAJOR-latest branch
-            var minorVersion = version.Change(null, null, 0, "", "");
-            var latestMajorMinorLatestBranch =
-                FindMajorMinorLatestBranches().Where(b => b.Version.Major == version.Major).First();
-            var isLatestMajorMinorLatestBranch = minorVersion >= latestMajorMinorLatestBranch.Version;
-            if (isLatestMajorMinorLatestBranch)
+            foreach (var location in FindVersionLocations())
             {
-                var majorLatestBranch = FormattableString.Invariant($"{version.Major}-latest");
-                Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorLatestBranch}"));
-                CreateOrMoveBranch(new GitCommitName(majorLatestBranch));
+                location.SetVersion(version);
+            }
+        }
+
+
+        public SemVersion GetVersion()
+        {
+            CheckLocal();
+
+            var locations = FindVersionLocations();
+
+            var version =
+                locations
+                    .Select(l => l.GetVersion())
+                    .Where(v => v != null)
+                    .Distinct()
+                    .SingleOrDefault();
+
+            if (version == null)
+            {
+                throw new UserException("No version recorded in repository");
             }
 
-            // Set latest branch
-            var majorVersion = version.Change(null, 0, 0, "", "");
-            var latestMajorLatestBranch = FindMajorLatestBranches().First();
-            var isLatestMajorLatestBranch = majorVersion >= latestMajorLatestBranch.Version;
-            if (isLatestMajorMinorLatestBranch && isLatestMajorLatestBranch)
+            return version;
+        }
+
+
+        public void CheckLocal()
+        {
+            CheckForVersionLocations();
+            CheckForConflictingVersions();
+            CheckForMissingVersions();
+        }
+
+
+        void CheckForVersionLocations()
+        {
+            var locations = FindVersionLocations();
+
+            if (locations.Count == 0)
             {
-                Trace.TraceInformation(FormattableString.Invariant($"Setting branch latest"));
-                CreateOrMoveBranch(new GitCommitName("latest"));
+                throw new UserException("No locations found in repository to record version");
+            }
+        }
+
+
+        void CheckForConflictingVersions()
+        {
+            var locations = FindVersionLocations();
+
+            var distinctVersions =
+                locations
+                    .Select(location => location.GetVersion())
+                    .Where(version => version != null)
+                    .Distinct()
+                    .ToList();
+
+            if (distinctVersions.Count == 1)
+            {
+                return;
             }
 
-            // Increment to next patch version
-            IncrementVersion(false, false);
+            Trace.TraceError("Conflicting versions found in repository:");
+            foreach (var location in locations)
+            {
+                var version = location.GetVersion() ?? "(none)";
+                var description = location.Description;
+                Trace.TraceError($"  {version} in {description}");
+            }
+            Trace.TraceError("Consider re-setting the correct current version using the 'set' command.");
+
+            throw new UserException("Conflicting versions found in repository");
+        }
+
+
+        void CheckForMissingVersions()
+        {
+            var locations = FindVersionLocations();
+            var missingLocations =
+                locations
+                    .Where(location => location.GetVersion() == null)
+                    .ToList();
+
+            if (missingLocations.Count == 0)
+            {
+                return;
+            }
+
+            Trace.TraceWarning($"Missing versions in some location(s) in the repository:");
+            foreach (var location in missingLocations)
+            {
+                Trace.TraceWarning($"  {location.Description}");
+            }
+            Trace.TraceWarning("Consider re-setting the current version using the 'set' command.");
         }
 
 
@@ -287,7 +341,16 @@ namespace Verbot
         }
 
 
-        IList<VisualStudioProject> FindProjects()
+        ICollection<VersionLocation> FindVersionLocations()
+        {
+            return
+                FindProjects()
+                    .Select(p => new VersionLocation(p))
+                    .ToList();
+        }
+
+
+        ICollection<VisualStudioProject> FindProjects()
         {
             return
                 // All projects
