@@ -7,6 +7,7 @@ using MacroGuards;
 using MacroSemver;
 using MacroSln;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace Verbot
 {
@@ -183,6 +184,12 @@ namespace Verbot
         }
 
 
+        public void CheckRemote()
+        {
+            CheckForIncorrectRemoteReleaseTags();
+        }
+
+
         void CheckForVersionLocations()
         {
             var locations = FindVersionLocations();
@@ -255,7 +262,7 @@ namespace Verbot
         void CheckVersionHasNotBeenReleased()
         {
             var releaseVersion = GetVersion().Change(null, null, null, "", "");
-            if (GetTags().Contains(new GitCommitName(releaseVersion.ToString())))
+            if (GetTags().Any(t => t.Name == releaseVersion))
                 throw new UserException("Current version has already been released");
         }
 
@@ -318,6 +325,61 @@ namespace Verbot
         }
 
 
+        void CheckNotAdvancingToLatestVersionOnNonMasterBranch(SemVersion newVersion)
+        {
+            var masterBranches = FindMasterBranches();
+            if (masterBranches.Count == 0) return;
+            var newMinorVersion = newVersion.Change(null, null, 0, "", "");
+            if (newMinorVersion > masterBranches.First().Version && GetBranch() != "master")
+                throw new UserException("Must be on master branch to advance to latest version");
+        }
+
+
+        void CheckForIncorrectRemoteReleaseTags()
+        {
+            var localReleaseTags =
+                GetTags()
+                    .Where(t => IsReleaseVersionNumber(t.Name));
+
+            var remoteReleaseTags =
+                GetRemoteTags()
+                    .Where(t => IsReleaseVersionNumber(t.Name))
+                    .ToDictionary(t => t.Name, t => t.Id);
+
+            GitCommitName LookupRemoteId(GitCommitName name)
+            {
+                return remoteReleaseTags.TryGetValue(name, out var id) ? id : null;
+            }
+
+            var releaseTags =
+                localReleaseTags
+                    .Select(t => (t.Name, LocalId: t.Id, RemoteId: LookupRemoteId(t.Name)));
+
+            var incorrectRemoteReleaseTags =
+                releaseTags
+                    .Where(t => t.RemoteId != null && t.RemoteId != t.LocalId)
+                    .ToList();
+
+            if (!incorrectRemoteReleaseTags.Any())
+            {
+                return;
+            }
+
+            foreach (var tag in incorrectRemoteReleaseTags)
+            {
+                Trace.TraceError($"Incorrect remote release tag {tag.Name} local {tag.LocalId} remote {tag.RemoteId}");
+            }
+
+            throw new UserException("Incorrect remote release tag(s) found");
+        }
+
+
+        bool IsReleaseVersionNumber(string value)
+        {
+            return Regex.IsMatch(value, @"^\d+\.\d+\.\d+$");
+        }
+
+
         SemVersion CalculateNextVersion(bool major, bool minor)
         {
             var v = GetVersion().Change(null, null, null, "master", "");
@@ -328,16 +390,6 @@ namespace Verbot
                     v.Change(null, v.Minor + 1, 0, null, null)
                 :
                     v.Change(null, null, v.Patch + 1, null, null);
-        }
-
-
-        void CheckNotAdvancingToLatestVersionOnNonMasterBranch(SemVersion newVersion)
-        {
-            var masterBranches = FindMasterBranches();
-            if (masterBranches.Count == 0) return;
-            var newMinorVersion = newVersion.Change(null, null, 0, "", "");
-            if (newMinorVersion > masterBranches.First().Version && GetBranch() != "master")
-                throw new UserException("Must be on master branch to advance to latest version");
         }
 
 

@@ -47,6 +47,8 @@ namespace Verbot
                     return Help(args);
                 case "check":
                     return Check(args);
+                case "check-remote":
+                    return CheckRemote(args);
                 case "get":
                     return Get(args);
                 case "set":
@@ -93,6 +95,18 @@ namespace Verbot
             if (args.Count > 0) throw new UserException("Unexpected arguments");
 
             repository.CheckLocal();
+
+            return 0;
+        }
+
+
+        static int CheckRemote(Queue<string> args)
+        {
+            var repository = GetCurrentRepository();
+
+            if (args.Count > 0) throw new UserException("Unexpected arguments");
+
+            repository.CheckRemote();
 
             return 0;
         }
