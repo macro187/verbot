@@ -427,8 +427,8 @@ namespace Verbot
         {
             return
                 GetBranches()
-                    .Where(name => MasterBranchInfo.IsMasterBranchName(name))
-                    .Select(name => new MasterBranchInfo(this, name))
+                    .Where(b => MasterBranchInfo.IsMasterBranchName(b.Name))
+                    .Select(b => new MasterBranchInfo(this, b.Name))
                     .OrderByDescending(b => b.Version)
                     .ToList();
         }
@@ -442,8 +442,8 @@ namespace Verbot
         {
             return
                 GetBranches()
-                    .Where(name => MajorLatestBranchInfo.IsMajorLatestBranchName(name))
-                    .Select(name => new MajorLatestBranchInfo(this, name))
+                    .Where(b => MajorLatestBranchInfo.IsMajorLatestBranchName(b.Name))
+                    .Select(b => new MajorLatestBranchInfo(this, b.Name))
                     .OrderByDescending(b => b.Version)
                     .ToList();
         }
@@ -457,8 +457,8 @@ namespace Verbot
         {
             return
                 GetBranches()
-                    .Where(name => MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(name))
-                    .Select(name => new MajorMinorLatestBranchInfo(this, name))
+                    .Where(b => MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name))
+                    .Select(b => new MajorMinorLatestBranchInfo(this, b.Name))
                     .OrderByDescending(b => b.Version)
                     .ToList();
         }
