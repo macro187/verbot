@@ -176,6 +176,31 @@ namespace Verbot
         }
 
 
+        public void Push(bool dryRun)
+        {
+            CheckNoUncommittedChanges();
+
+            var verbotBranchesWithRemote = GetVerbotBranchesWithRemote();
+            var verbotTagsWithRemote = GetVerbotTagsWithRemote();
+
+            CheckForRemoteBranchesAtUnknownCommits(verbotBranchesWithRemote);
+            CheckForRemoteBranchesNotBehindLocal(verbotBranchesWithRemote);
+            CheckForIncorrectRemoteTags(verbotTagsWithRemote);
+
+            var branchesToPush = verbotBranchesWithRemote.Where(b => b.RemoteId != b.LocalId);
+            var tagsToPush = verbotTagsWithRemote.Where(b => b.RemoteId != b.LocalId);
+            var refsToPush = branchesToPush.Concat(tagsToPush);
+
+            if (!refsToPush.Any())
+            {
+                Trace.TraceInformation("All remote version branches and tags already up-to-date");
+                return;
+            }
+
+            Push(refsToPush.Select(r => r.Name), dryRun: dryRun, echoOutput: true);
+        }
+
+
         public void CheckLocal()
         {
             CheckForVersionLocations();
@@ -186,8 +211,12 @@ namespace Verbot
 
         public void CheckRemote()
         {
-            CheckForIncorrectRemoteReleaseTags();
-            CheckForIncorrectRemoteBranches();
+            var verbotBranchesWithRemote = GetVerbotBranchesWithRemote();
+            var verbotTagsWithRemote = GetVerbotTagsWithRemote();
+
+            CheckForRemoteBranchesAtUnknownCommits(verbotBranchesWithRemote);
+            CheckForRemoteBranchesNotBehindLocal(verbotBranchesWithRemote);
+            CheckForIncorrectRemoteTags(verbotTagsWithRemote);
         }
 
 
@@ -336,98 +365,113 @@ namespace Verbot
         }
 
 
-        void CheckForIncorrectRemoteReleaseTags()
+        void CheckForIncorrectRemoteTags(IEnumerable<GitRefWithRemote> verbotTagsWithRemote)
         {
-            var localReleaseTags =
-                GetTags()
-                    .Where(t => IsReleaseVersionNumber(t.Name));
-
-            var remoteReleaseTags =
-                GetRemoteTags()
-                    .Where(t => IsReleaseVersionNumber(t.Name))
-                    .ToDictionary(t => t.Name, t => t.Id);
-
-            GitCommitName LookupRemoteId(GitCommitName name) =>
-                remoteReleaseTags.TryGetValue(name, out var id) ? id : null;
-
-            var releaseTags =
-                localReleaseTags
-                    .Select(t => (t.Name, LocalId: t.Id, RemoteId: LookupRemoteId(t.Name)));
-
-            var incorrectRemoteReleaseTags =
-                releaseTags
-                    .Where(t => t.RemoteId != null && t.RemoteId != t.LocalId)
+            var incorrectRemoteTags =
+                verbotTagsWithRemote
+                    .Where(t => t.RemoteId != null)
+                    .Where(t => t.RemoteId != t.LocalId)
                     .ToList();
 
-            if (!incorrectRemoteReleaseTags.Any())
+            if (!incorrectRemoteTags.Any()) return;
+
+            foreach (var tag in incorrectRemoteTags)
             {
-                return;
+                Trace.TraceError($"Remote tag {tag.Name} at {tag.RemoteId} local {tag.LocalId}");
             }
 
-            foreach (var tag in incorrectRemoteReleaseTags)
-            {
-                Trace.TraceError($"Incorrect remote release tag {tag.Name} local {tag.LocalId} remote {tag.RemoteId}");
-            }
-
-            throw new UserException("Incorrect remote release tag(s) found");
+            throw new UserException("Incorrect remote tag(s) found");
         }
 
 
-        void CheckForIncorrectRemoteBranches()
+        void CheckForRemoteBranchesAtUnknownCommits(IEnumerable<GitRefWithRemote> verbotBranchesWithRemote)
         {
-            var localBranches =
+            var remoteBranchesAtUnknownCommits =
+                verbotBranchesWithRemote
+                    .Where(b => b.RemoteId != null)
+                    .Where(b => !Exists(b.RemoteId))
+                    .ToList();
+
+            if (!remoteBranchesAtUnknownCommits.Any()) return;
+
+            foreach (var branch in remoteBranchesAtUnknownCommits)
+            {
+                Trace.TraceError($"Remote branch {branch.Name} at unknown commit {branch.RemoteId}");
+            }
+
+            throw new UserException("Remote branch(es) at unknown commits");
+        }
+
+
+        void CheckForRemoteBranchesNotBehindLocal(IEnumerable<GitRefWithRemote> verbotBranchesWithRemote)
+        {
+            var remoteBranchesNotBehindLocal =
+                verbotBranchesWithRemote
+                    .Where(b => b.RemoteId != null)
+                    .Where(b => !IsAncestor(b.RemoteId, b.LocalId))
+                    .ToList();
+
+            if (!remoteBranchesNotBehindLocal.Any()) return;
+
+            foreach (var branch in remoteBranchesNotBehindLocal)
+            {
+                Trace.TraceError(
+                    $"Remote branch {branch.Name} at {branch.RemoteId} not behind local at {branch.LocalId}");
+            }
+
+            throw new UserException("Remote branch(es) not behind local");
+        }
+
+
+        IEnumerable<GitRefWithRemote> GetVerbotTagsWithRemote()
+        {
+            var verbotTags = GetVerbotTags();
+            var remoteTagsLookup = GetRemoteTags().ToDictionary(t => t.Name, t => t.Id);
+
+            GitCommitName LookupRemoteId(GitCommitName name) =>
+                remoteTagsLookup.TryGetValue(name, out var id) ? id : null;
+
+            return
+                verbotTags
+                    .Select(t => new GitRefWithRemote(t.Name, t.Id, LookupRemoteId(t.Name)))
+                    .ToList();
+        }
+
+
+        IEnumerable<GitRefWithRemote> GetVerbotBranchesWithRemote()
+        {
+            var verbotBranches = GetVerbotBranches();
+            var remoteBranchesLookup = GetRemoteBranches().ToDictionary(b => b.Name, b => b.Id);
+
+            GitCommitName LookupRemoteId(GitCommitName name) =>
+                remoteBranchesLookup.TryGetValue(name, out var id) ? id : null;
+
+            return
+                verbotBranches
+                    .Select(t => new GitRefWithRemote(t.Name, t.Id, LookupRemoteId(t.Name)))
+                    .ToList();
+        }
+
+
+        IEnumerable<GitRef> GetVerbotTags()
+        {
+            return
+                GetTags()
+                    .Where(t => IsReleaseVersionNumber(t.Name))
+                    .ToList();
+        }
+
+
+        IEnumerable<GitRef> GetVerbotBranches()
+        {
+            return
                 GetBranches()
                     .Where(b =>
                         MasterBranchInfo.IsMasterBranchName(b.Name) ||
                         b.Name == "latest" ||
                         MajorLatestBranchInfo.IsMajorLatestBranchName(b.Name) ||
-                        MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name));
-
-            var remoteBranches = GetRemoteBranches().ToDictionary(b => b.Name, b => b.Id);
-
-            GitCommitName LookupRemoteId(GitCommitName name) =>
-                remoteBranches.TryGetValue(name, out var id) ? id : null;
-
-            var branches =
-                localBranches
-                    .Select(t => (t.Name, LocalId: t.Id, RemoteId: LookupRemoteId(t.Name)));
-
-            var branchesWithRemote =
-                branches
-                    .Where(b => b.RemoteId != null)
+                        MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name))
                     .ToList();
-
-            var remoteBranchesAtUnknownCommits =
-                branchesWithRemote
-                    .Where(b => !Exists(b.RemoteId))
-                    .ToList();
-
-            if (remoteBranchesAtUnknownCommits.Any())
-            {
-                foreach (var branch in remoteBranchesAtUnknownCommits)
-                {
-                    Trace.TraceError(
-                        $"Remote branch {branch.Name} at unknown commit {branch.RemoteId}");
-                }
-
-                throw new UserException("Remote branch(es) at unknown commits");
-            }
-
-            var remoteBranchesNotBehindLocal =
-                branchesWithRemote
-                    .Where(b => !IsAncestor(b.RemoteId, b.LocalId))
-                    .ToList();
-
-            if (remoteBranchesNotBehindLocal.Any())
-            {
-                foreach (var branch in remoteBranchesNotBehindLocal)
-                {
-                    Trace.TraceError(
-                        $"Remote branch {branch.Name} at {branch.RemoteId} not behind local at {branch.LocalId}");
-                }
-
-                throw new UserException("Remote branch(es) not behind local");
-            }
         }
 
 
@@ -518,6 +562,21 @@ namespace Verbot
                     .Select(b => new MajorMinorLatestBranchInfo(this, b.Name))
                     .OrderByDescending(b => b.Version)
                     .ToList();
+        }
+
+
+        class GitRefWithRemote
+        {
+            public GitRefWithRemote(GitCommitName name, GitCommitName localId, GitCommitName remoteId)
+            {
+                Name = name;
+                LocalId = localId;
+                RemoteId = remoteId;
+            }
+
+            public GitCommitName Name { get; }
+            public GitCommitName LocalId { get; }
+            public GitCommitName RemoteId { get; }
         }
 
     }

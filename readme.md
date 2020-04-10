@@ -145,6 +145,15 @@ Commands
             Increment to the next patch version, add the -master prerelease
             version component, and commit
 
+    push [--dry-run]
+        `git push` any changed or missing version-related branches and tags.
+
+        Performing a --dry-run outputs what branches or tags would be pushed,
+        but doesn't actually do it.
+
+        The operation fails if there are uncommitted changes in the
+        repository.
+
     check
         Check basic assumptions about the local repository required for verbot
         to operate.

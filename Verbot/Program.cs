@@ -45,10 +45,6 @@ namespace Verbot
             {
                 case "help":
                     return Help(args);
-                case "check":
-                    return Check(args);
-                case "check-remote":
-                    return CheckRemote(args);
                 case "get":
                     return Get(args);
                 case "set":
@@ -57,6 +53,12 @@ namespace Verbot
                     return Increment(args);
                 case "release":
                     return Release(args);
+                case "push":
+                    return Push(args);
+                case "check":
+                    return Check(args);
+                case "check-remote":
+                    return CheckRemote(args);
                 default:
                     throw new UserException("Unrecognised command: " + command);
             }
@@ -83,30 +85,6 @@ namespace Verbot
                     Trace.TraceInformation(line);
                 }
             }
-
-            return 0;
-        }
-
-
-        static int Check(Queue<string> args)
-        {
-            var repository = GetCurrentRepository();
-
-            if (args.Count > 0) throw new UserException("Unexpected arguments");
-
-            repository.CheckLocal();
-
-            return 0;
-        }
-
-
-        static int CheckRemote(Queue<string> args)
-        {
-            var repository = GetCurrentRepository();
-
-            if (args.Count > 0) throw new UserException("Unexpected arguments");
-
-            repository.CheckRemote();
 
             return 0;
         }
@@ -178,6 +156,53 @@ namespace Verbot
             if (args.Count > 0) throw new UserException("Unexpected arguments");
             var repository = GetCurrentRepository();
             repository.Release();
+            return 0;
+        }
+
+
+        static int Push(Queue<string> args)
+        {
+            var repository = GetCurrentRepository();
+
+            bool dryRun = false;
+            while (args.Count > 0)
+            {
+                var arg = args.Dequeue();
+                switch (arg)
+                {
+                    case "--dry-run":
+                        dryRun = true;
+                        break;
+                    default:
+                        throw new UserException($"Unrecognised argument: {arg}");
+                }
+            }
+            repository.Push(dryRun);
+
+            return 0;
+        }
+
+
+        static int Check(Queue<string> args)
+        {
+            var repository = GetCurrentRepository();
+
+            if (args.Count > 0) throw new UserException("Unexpected arguments");
+
+            repository.CheckLocal();
+
+            return 0;
+        }
+
+
+        static int CheckRemote(Queue<string> args)
+        {
+            var repository = GetCurrentRepository();
+
+            if (args.Count > 0) throw new UserException("Unexpected arguments");
+
+            repository.CheckRemote();
+
             return 0;
         }
 
