@@ -148,8 +148,9 @@ Commands
     push [--dry-run]
         `git push` any changed or missing version-related branches and tags.
 
-        Performing a --dry-run outputs what branches or tags would be pushed,
-        but doesn't actually do it.
+        --dry-run
+            Outputs what branches or tags would be pushed, but doesn't
+            actually do it.
 
         The operation fails if there are uncommitted changes in the
         repository.
