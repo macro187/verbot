@@ -25,6 +25,13 @@ namespace Verbot
         public VisualStudioSolution Solution { get; }
 
 
+        public SemVersion Calc(bool verbose)
+        {
+            // XXX
+            return CalcPrerelease(new GitCommitName("HEAD"), verbose);
+        }
+
+
         public void Release()
         {
             CheckLocal();
@@ -425,7 +432,7 @@ namespace Verbot
 
         IEnumerable<GitRefWithRemote> GetVerbotTagsWithRemote()
         {
-            var verbotTags = GetVerbotTags();
+            var verbotTags = FindReleaseTags();
             var remoteTagsLookup = GetRemoteTags().ToDictionary(t => t.Name, t => t.Id);
 
             GitCommitName LookupRemoteId(GitCommitName name) =>
@@ -453,11 +460,84 @@ namespace Verbot
         }
 
 
-        IEnumerable<GitRef> GetVerbotTags()
+        SemVersion CalcPrerelease(GitCommitName name, bool verbose)
+        {
+            var mostRecentReleaseTag = FindMostRecentReleaseTag(name);
+
+            SemVersion version;
+            if (mostRecentReleaseTag != null)
+            {
+                if (verbose)
+                {
+                    Trace.TraceInformation(
+                        $"Most recent release tag is {mostRecentReleaseTag.Name} at {mostRecentReleaseTag.Id}");
+                }
+                version = mostRecentReleaseTag.Version;
+            }
+            else
+            {
+                if (verbose)
+                {
+                    Trace.TraceInformation($"No previous release tags, using beginning of history as 0.0.0");
+                }
+                version = new SemVersion(0, 0, 0);
+            }
+
+            // TODO Recognise +semver tags
+            var newPatch = version.Patch + 1;
+            if (verbose)
+            {
+                Trace.TraceInformation($"Incrementing patch to {newPatch}");
+            }
+            version = version.Change(patch: newPatch);
+
+            var distance =
+                mostRecentReleaseTag != null
+                    ? Distance(mostRecentReleaseTag.Name, name)
+                    : Distance(name);
+            if (verbose)
+            {
+                Trace.TraceInformation($"Distance from previous release {distance} commits");
+            }
+            var committerDate = GetCommitterDate(name);
+            if (verbose)
+            {
+                Trace.TraceInformation($"Commit date {committerDate:yyyy-MM-ddTHH:mm:sszzz}");
+            }
+            var dateComponent = committerDate.ToUniversalTime().ToString("yyyyMMdd");
+            var timeComponent = committerDate.ToUniversalTime().ToString("HHmmss");
+            var newPreRelease = $"alpha.{distance}.{dateComponent}.{timeComponent}";
+            version = version.Change(prerelease: newPreRelease);
+
+            var id = GetCommitId(name);
+            if (verbose)
+            {
+                Trace.TraceInformation($"Commit hash {id}");
+            }
+            version = version.Change(build: id);
+
+            return version;
+        }
+
+
+        ReleaseTagInfo FindMostRecentReleaseTag(GitCommitName name)
+        {
+            var id = GetCommitId(name);
+
+            return
+                FindReleaseTags()
+                    .Where(t => t.Id != id)
+                    .FirstOrDefault(t => IsAncestor(t.Name, name));
+        }
+
+
+        IEnumerable<ReleaseTagInfo> FindReleaseTags()
         {
             return
                 GetTags()
                     .Where(t => IsReleaseVersionNumber(t.Name))
+                    .Select(t => new ReleaseTagInfo(t.Name, SemVersion.Parse(t.Name), t.Id))
+                    .OrderByDescending(t => t.Version)
                     .ToList();
         }
 
@@ -577,6 +657,21 @@ namespace Verbot
             public GitCommitName Name { get; }
             public GitCommitName LocalId { get; }
             public GitCommitName RemoteId { get; }
+        }
+
+
+        class ReleaseTagInfo
+        {
+            public ReleaseTagInfo(GitCommitName name, SemVersion version, GitCommitName id)
+            {
+                Name = name;
+                Version = version;
+                Id = id;
+            }
+
+            public GitCommitName Name { get; }
+            public SemVersion Version { get; }
+            public GitCommitName Id { get; }
         }
 
     }

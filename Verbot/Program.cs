@@ -45,6 +45,8 @@ namespace Verbot
             {
                 case "help":
                     return Help(args);
+                case "calc":
+                    return Calc(args);
                 case "get":
                     return Get(args);
                 case "set":
@@ -86,6 +88,31 @@ namespace Verbot
                 }
             }
 
+            return 0;
+        }
+
+
+        static int Calc(Queue<string> args)
+        {
+            var repository = GetCurrentRepository();
+
+            var verbose = false;
+            while (args.Count > 0)
+            {
+                var arg = args.Dequeue();
+                switch (arg)
+                {
+                    case "--verbose":
+                        verbose = true;
+                        break;
+                    default:
+                        throw new UserException("Unrecognised argument: " + arg);
+                }
+            }
+
+            var version = repository.Calc(verbose);
+
+            Console.Out.WriteLine(version.ToString());
             return 0;
         }
 
