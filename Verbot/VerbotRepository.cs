@@ -462,59 +462,49 @@ namespace Verbot
 
         SemVersion CalcPrerelease(GitCommitName name, bool verbose)
         {
-            var mostRecentReleaseTag = FindMostRecentReleaseTag(name);
-
             SemVersion version;
+
+            void TraceStep(string description)
+            {
+                if (!verbose) return;
+                Trace.TraceInformation($"{version} ({description})");
+            }
+
+            var mostRecentReleaseTag = FindMostRecentReleaseTag(name);
             if (mostRecentReleaseTag != null)
             {
-                if (verbose)
-                {
-                    Trace.TraceInformation(
-                        $"Most recent release tag is {mostRecentReleaseTag.Name} at {mostRecentReleaseTag.Id}");
-                }
                 version = mostRecentReleaseTag.Version;
+                TraceStep($"Previous release tag at {mostRecentReleaseTag.Id}");
             }
             else
             {
-                if (verbose)
-                {
-                    Trace.TraceInformation($"No previous release tags, using beginning of history as 0.0.0");
-                }
                 version = new SemVersion(0, 0, 0);
+                TraceStep($"No previous release tags, starting at the beginning of history");
             }
 
             // TODO Recognise +semver tags
             var newPatch = version.Patch + 1;
-            if (verbose)
-            {
-                Trace.TraceInformation($"Incrementing patch to {newPatch}");
-            }
             version = version.Change(patch: newPatch);
+            TraceStep($"Next release will be patch");
+
+            version = version.Change(prerelease: "alpha");
+            TraceStep($"This is a pre-release");
 
             var distance =
                 mostRecentReleaseTag != null
                     ? Distance(mostRecentReleaseTag.Name, name)
                     : Distance(name);
-            if (verbose)
-            {
-                Trace.TraceInformation($"Distance from previous release {distance} commits");
-            }
-            var committerDate = GetCommitterDate(name);
-            if (verbose)
-            {
-                Trace.TraceInformation($"Commit date {committerDate:yyyy-MM-ddTHH:mm:sszzz}");
-            }
-            var dateComponent = committerDate.ToUniversalTime().ToString("yyyyMMdd");
-            var timeComponent = committerDate.ToUniversalTime().ToString("HHmmss");
-            var newPreRelease = $"alpha.{distance}.{dateComponent}.{timeComponent}";
-            version = version.Change(prerelease: newPreRelease);
+            version = version.Change(prerelease: $"{version.Prerelease}.{distance}");
+            TraceStep($"Number of commit(s) since previous release");
 
-            var id = GetCommitId(name);
-            if (verbose)
-            {
-                Trace.TraceInformation($"Commit hash {id}");
-            }
-            version = version.Change(build: id);
+            var committerDate = GetCommitterDate(name).ToUniversalTime();
+            var committerDateIdentifier = committerDate.ToString("yyyyMMddTHHmmss");
+            version = version.Change(prerelease: $"{version.Prerelease}.{committerDateIdentifier}");
+            TraceStep($"Commit date");
+
+            var shortHash = GetShortCommitId(name, 4);
+            version = version.Change(prerelease: $"{version.Prerelease}.{shortHash}");
+            TraceStep($"Short commit hash");
 
             return version;
         }
