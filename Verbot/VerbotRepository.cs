@@ -8,6 +8,7 @@ using MacroSemver;
 using MacroSln;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using MacroSystem;
 
 namespace Verbot
 {
@@ -479,21 +480,48 @@ namespace Verbot
             else
             {
                 version = new SemVersion(0, 0, 0);
-                TraceStep($"No previous release tags, starting at the beginning of history");
+                TraceStep($"No previous release tags");
             }
 
-            // TODO Recognise +semver tags
-            var newPatch = version.Patch + 1;
-            version = version.Change(patch: newPatch);
-            TraceStep($"Next release will be patch");
+            var commitsSincePreviousRelease = ListCommits(mostRecentReleaseTag?.Name, name).ToList();
+            var firstMinorChangeId =
+                commitsSincePreviousRelease
+                    .Select(id => (Id: id, Message: GetCommitMessage(id)))
+                    .Where(commit =>
+                        StringExtensions.SplitLines(commit.Message)
+                            .Any(line =>
+                                Regex.IsMatch(line.Trim(), @"^\+semver:\s?(feature|minor)$")))
+                    .Select(commit => commit.Id)
+                    .FirstOrDefault();
+            var firstMajorChangeId =
+                commitsSincePreviousRelease
+                    .Select(id => (Id: id, Message: GetCommitMessage(id)))
+                    .Where(commit =>
+                        StringExtensions.SplitLines(commit.Message)
+                            .Any(line =>
+                                Regex.IsMatch(line.Trim(), @"^\+semver:\s?(breaking|major)$")))
+                    .Select(commit => commit.Id)
+                    .FirstOrDefault();
+            if (firstMajorChangeId != null)
+            {
+                version = version.Change(major: version.Major + 1, minor: 0, patch: 0);
+                TraceStep($"Major +semver commit {firstMajorChangeId}");
+            }
+            else if (firstMinorChangeId != null)
+            {
+                version = version.Change(minor: version.Minor + 1, patch: 0);
+                TraceStep($"Minor +semver commit {firstMinorChangeId}");
+            }
+            else
+            {
+                version = version.Change(patch: version.Patch + 1);
+                TraceStep($"No major or minor +semver commit(s)");
+            }
 
             version = version.Change(prerelease: "alpha");
-            TraceStep($"This is a pre-release");
+            TraceStep($"Pre-release");
 
-            var distance =
-                mostRecentReleaseTag != null
-                    ? Distance(mostRecentReleaseTag.Name, name)
-                    : Distance(name);
+            var distance = commitsSincePreviousRelease.Count;
             version = version.Change(prerelease: $"{version.Prerelease}.{distance}");
             TraceStep($"Number of commit(s) since previous release");
 
