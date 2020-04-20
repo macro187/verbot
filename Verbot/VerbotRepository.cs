@@ -26,10 +26,21 @@ namespace Verbot
         public VisualStudioSolution Solution { get; }
 
 
-        public SemVersion Calc(bool verbose)
+        public SemVersion CalculateVersion(bool verbose)
         {
-            // XXX
-            return CalcPrerelease(new GitCommitName("HEAD"), verbose);
+            return CalculateVersion(new GitCommitName("HEAD"), verbose);
+        }
+
+
+        public SemVersion CalculateReleaseVersion(bool verbose)
+        {
+            return CalculateReleaseVersion(new GitCommitName("HEAD"), verbose);
+        }
+
+
+        public SemVersion CalculatePrereleaseVersion(bool verbose)
+        {
+            return CalculatePrereleaseVersion(new GitCommitName("HEAD"), verbose);
         }
 
 
@@ -461,7 +472,38 @@ namespace Verbot
         }
 
 
-        SemVersion CalcPrerelease(GitCommitName name, bool verbose)
+        SemVersion CalculateReleaseVersion(GitCommitName name, bool verbose)
+        {
+            return
+                CalculateVersion(name, verbose)
+                    .Change(prerelease: "", build: "");
+        }
+
+
+        SemVersion CalculateVersion(GitCommitName name, bool verbose)
+        {
+            var commitId = GetCommitId(name);
+            var releaseTags = FindReleaseTags().ToList();
+
+            var versionFromTag =
+                releaseTags
+                    .Where(tag => tag.Id == commitId)
+                    .Select(tag => tag.Version)
+                    .SingleOrDefault();
+
+            return
+                versionFromTag ??
+                CalculatePrereleaseVersion(name, releaseTags, verbose);
+        }
+
+
+        SemVersion CalculatePrereleaseVersion(GitCommitName name, bool verbose)
+        {
+            return CalculatePrereleaseVersion(name, FindReleaseTags(), verbose);
+        }
+
+
+        SemVersion CalculatePrereleaseVersion(GitCommitName name, IEnumerable<ReleaseTagInfo> releaseTags, bool verbose)
         {
             SemVersion version;
 
@@ -471,7 +513,13 @@ namespace Verbot
                 Trace.TraceInformation($"{version} ({description})");
             }
 
-            var mostRecentReleaseTag = FindMostRecentReleaseTag(name);
+            var commitId = GetCommitId(name);
+
+            var mostRecentReleaseTag =
+                releaseTags
+                    .Where(t => t.Id != commitId)
+                    .FirstOrDefault(t => IsAncestor(t.Name, name));
+
             if (mostRecentReleaseTag != null)
             {
                 version = mostRecentReleaseTag.Version;
@@ -534,17 +582,6 @@ namespace Verbot
             TraceStep($"Short commit hash");
 
             return version;
-        }
-
-
-        ReleaseTagInfo FindMostRecentReleaseTag(GitCommitName name)
-        {
-            var id = GetCommitId(name);
-
-            return
-                FindReleaseTags()
-                    .Where(t => t.Id != id)
-                    .FirstOrDefault(t => IsAncestor(t.Name, name));
         }
 
 

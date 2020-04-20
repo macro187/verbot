@@ -74,6 +74,29 @@ Commands
     help
         Display usage information
 
+    calc [--verbose]
+    calc --release [--verbose]
+    calc --prerelease [--verbose]
+        Calculate the current commit's version number.
+
+        If the current commit is tagged with a release version, output that.
+        Otherwise, compute and output a unique pre-release version as
+        described in the "Version Computation Scheme" section.
+
+        --release
+            Output a release version number.  If the current commit hasn't
+            been tagged as a release, output the release version it would be
+            if it were.
+
+        --prerelease
+            Output a pre-release version number.  If the current commit has
+            been tagged as a release, output the pre-release version it would
+            be if it wasn't.
+
+        --verbose
+            Output diagnostic information about how the version number is
+            calculated.
+
     get
         Get the current version number
 
@@ -172,6 +195,30 @@ Commands
         Specifically:
             There are no remote release tags that differ from their local
             equivalents.
+
+
+
+Version Computation Scheme
+==========================
+
+    Verbot computes versions by working forward from the previous tagged
+    release, taking into account whether there have been any major or minor
+    changes, the number of commits, the current commit date, and the current
+    commit hash.
+
+    The resulting version numbers sort according to topological order in the
+    Git commit graph relative to the previous release, followed by commit
+    date, followed by short commit hashes to guarantee uniqueness.
+
+    Major, minor, and patch version number components advance according to the
+    SemVer specification based on the presence of major and/or minor changes
+    in intervening commits.
+
+    Whether commits represent major or minor changes is determined by special
+    "+semver" lines in commit messages.  A "+semver: major" or "+semver:
+    breaking" line indicates a major, breaking change.  A "+semver: minor" or
+    "+semver: feature" line indicates a minor, backwards-compatible feature
+    change.
 
 
 

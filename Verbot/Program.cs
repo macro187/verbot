@@ -97,11 +97,19 @@ namespace Verbot
             var repository = GetCurrentRepository();
 
             var verbose = false;
+            var release = false;
+            var prerelease = false;
             while (args.Count > 0)
             {
                 var arg = args.Dequeue();
                 switch (arg)
                 {
+                    case "--release":
+                        release = true;
+                        break;
+                    case "--prerelease":
+                        prerelease = true;
+                        break;
                     case "--verbose":
                         verbose = true;
                         break;
@@ -110,7 +118,17 @@ namespace Verbot
                 }
             }
 
-            var version = repository.Calc(verbose);
+            if (release && prerelease)
+            {
+                throw new UserException("Can't calculate --release and --prerelease version at the same time");
+            }
+
+            var version =
+                release
+                    ? repository.CalculateReleaseVersion(verbose)
+                : prerelease
+                    ? repository.CalculatePrereleaseVersion(verbose)
+                    : repository.CalculateVersion(verbose);
 
             Console.Out.WriteLine(version.ToString());
             return 0;
