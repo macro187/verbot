@@ -484,24 +484,23 @@ namespace Verbot
             }
 
             var commitsSincePreviousRelease = ListCommits(mostRecentReleaseTag?.Name, name).ToList();
-            var firstMinorChangeId =
-                commitsSincePreviousRelease
-                    .Select(id => (Id: id, Message: GetCommitMessage(id)))
-                    .Where(commit =>
-                        StringExtensions.SplitLines(commit.Message)
-                            .Any(line =>
-                                Regex.IsMatch(line.Trim(), @"^\+semver:\s?(feature|minor)$")))
-                    .Select(commit => commit.Id)
-                    .FirstOrDefault();
-            var firstMajorChangeId =
-                commitsSincePreviousRelease
-                    .Select(id => (Id: id, Message: GetCommitMessage(id)))
-                    .Where(commit =>
-                        StringExtensions.SplitLines(commit.Message)
-                            .Any(line =>
-                                Regex.IsMatch(line.Trim(), @"^\+semver:\s?(breaking|major)$")))
-                    .Select(commit => commit.Id)
-                    .FirstOrDefault();
+            string firstMajorChangeId = null;
+            string firstMinorChangeId = null;
+            foreach (var id in commitsSincePreviousRelease)
+            {
+                var message = GetCommitMessage(id);
+                var lines = StringExtensions.SplitLines(message).Select(line => line.Trim()).ToList();
+                if (lines.Any(line => Regex.IsMatch(line, @"^\+semver:\s?(breaking|major)$")))
+                {
+                    firstMajorChangeId = firstMajorChangeId ?? id;
+                    break;
+                }
+                if (lines.Any(line => Regex.IsMatch(line, @"^\+semver:\s?(feature|minor)$")))
+                {
+                    firstMinorChangeId = firstMinorChangeId ?? id;
+                }
+            }
+
             if (firstMajorChangeId != null)
             {
                 version = version.Change(major: version.Major + 1, minor: 0, patch: 0);
