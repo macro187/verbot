@@ -23,6 +23,9 @@ namespace Verbot
         }
 
 
+        public static readonly SemVersion DefaultVersion = new SemVersion(9999, 0, 0, "alpha");
+
+
         public VisualStudioSolution Solution { get; }
 
 
@@ -87,6 +90,12 @@ namespace Verbot
             }
 
             return version;
+        }
+
+
+        public void WriteDefaultVersion()
+        {
+            WriteToVersionLocations(DefaultVersion);
         }
 
 

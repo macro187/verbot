@@ -121,6 +121,12 @@ Commands
             Output diagnostic information about how the version number is
             calculated.
 
+    reset
+        Record a default "9999.0.0-alpha" version number in source code files
+
+        Details on where version numbers are recorded in source code files can
+        be found in the "Versions in Source Code" section.
+
     read
         Output the version number currently recorded in source code files
 

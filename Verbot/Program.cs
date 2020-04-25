@@ -49,6 +49,8 @@ namespace Verbot
                     return Calc(args);
                 case "write":
                     return Write(args);
+                case "reset":
+                    return Reset(args);
                 case "read":
                     return Read(args);
                 case "increment":
@@ -174,6 +176,20 @@ namespace Verbot
                     : repository.WriteVersion(verbose);
 
             Console.Out.WriteLine(version.ToString());
+            return 0;
+        }
+
+
+        static int Reset(Queue<string> args)
+        {
+            var repository = GetCurrentRepository();
+
+            if (args.Count > 0)
+            {
+                throw new UserException("Unexpected arguments");
+            }
+
+            repository.WriteDefaultVersion();
             return 0;
         }
 
