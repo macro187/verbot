@@ -12,61 +12,6 @@ Synopsis
 
 
 
-Description
-===========
-
-    verbot operates according to a strict view of how version numbering should
-    work.
-
-    Version number formats and rules are according to the Semantic Versioning
-    specification <http://semver.org/>.
-
-    >   This overrules everyone else including Microsoft
-
-    Version numbers apply across entire Git repositories.
-
-    Git repositories contain single Visual Studio solutions.
-
-    Version information is stored in properties in projects that are both in
-    the solution and in the repository.  If more than one such project exists,
-    they all contain the same version.
-
-    `Version` properties contain the full version number in Semantic
-    Versioning format.
-
-    `AssemblyVersion` properties contain a four-part .NET version number
-    consisting of the current major version plus three zeroes e.g. "1.0.0.0"
-
-    >   This reflects backward-compatibility within major versions
-
-    `AssemblyFileVersion` properties contain a four-part .NET version number
-    consisting of the current major, minor, and patch versions plus a zero
-    e.g.  "1.1.1.0"
-
-    >   This is the closest a .NET version number can get to a full Semantic
-    >   Version
-
-    Development proceeds toward releases on master branches.  There are master
-    branches for all possible future major-minor releases.  The master branch
-    proceeding towards the highest precedence (or "latest") release is named
-    "master".  Master branches proceeding towards all other releases are named
-    according to the MAJOR.MINOR version plus a -master suffix e.g.
-    "1.1-master"
-
-    >   This enables concurrent development and maintenance of any number of
-    >   MAJOR.MINOR versions of the software
-
-    During development, the current version number is the version of the
-    release being worked toward plus a -master pre-release suffix e.g.
-    "1.2.3-master"
-
-    TODO Releases
-
-    verbot operations affect the repository that the current working directory
-    is in.
-
-
-
 Commands
 ========
 
@@ -247,13 +192,35 @@ Versions in Source Code
 =======================
 
     .NET Projects
+        Repositories are assumed to contain a single Visual Studio solution.
+
         Version numbers are recorded in properties in `.csproj` files.
 
-            `<Version>` properties contain full semantic version numbers
+        `<Version>` properties contain full semantic version numbers.
 
-            `<AssemblyFileVersion>` properties contain MAJOR.MINOR.PATCH.0
+        `<AssemblyVersion>` properties contain four-part MAJOR.0.0.0 .NET
+        version numbers consisting of the current major version plus three
+        zeroes e.g. "1.0.0.0", reflecting backward-compatibility within major
+        versions.
 
-            `<AssemblyVersion>` properties contain MAJOR.0.0.0
+        `<AssemblyFileVersion>` properties contain four-part
+        MAJOR.MINOR.PATCH.0 .NET version numbers consisting of the current
+        major, minor, and patch versions plus a zero e.g. "1.1.1.0", which is
+        the closest .NET version numbers can get to representing semantic
+        versions.
+
+
+
+Master Branches
+===============
+
+    Development proceeds toward releases on master branches.  There are master
+    branches for all major-minor release series, enabling concurrent
+    development and maintenance of any number of them.
+
+    Master branches are named according to a "MAJOR.MINOR-master" pattern,
+    e.g. "1.1-master".  The one exception is the master branch for the latest
+    release series, which is just "master".
 
 
 
