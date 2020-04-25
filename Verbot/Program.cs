@@ -49,8 +49,8 @@ namespace Verbot
                     return Calc(args);
                 case "write":
                     return Write(args);
-                case "get":
-                    return Get(args);
+                case "read":
+                    return Read(args);
                 case "increment":
                     return Increment(args);
                 case "release":
@@ -178,13 +178,16 @@ namespace Verbot
         }
 
 
-        static int Get(Queue<string> args)
+        static int Read(Queue<string> args)
         {
             var repository = GetCurrentRepository();
 
-            if (args.Count > 0) throw new UserException("Unexpected arguments");
+            if (args.Count > 0)
+            {
+                throw new UserException("Unexpected arguments");
+            }
 
-            var version = repository.GetVersion();
+            var version = repository.ReadFromVersionLocations();
             Console.Out.WriteLine(version.ToString());
             return 0;
         }

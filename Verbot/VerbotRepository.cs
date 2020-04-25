@@ -68,6 +68,28 @@ namespace Verbot
         }
 
 
+        public SemVersion ReadFromVersionLocations()
+        {
+            CheckLocal();
+
+            var locations = FindVersionLocations();
+
+            var version =
+                locations
+                    .Select(l => l.GetVersion())
+                    .Where(v => v != null)
+                    .Distinct()
+                    .SingleOrDefault();
+
+            if (version == null)
+            {
+                throw new UserException("No version recorded in repository");
+            }
+
+            return version;
+        }
+
+
         public void Release()
         {
             CheckLocal();
@@ -79,7 +101,7 @@ namespace Verbot
             CheckVersionHasNotBeenReleased();
 
             // Set release version and commit
-            var version = GetVersion().Change(null, null, null, "", "");
+            var version = ReadFromVersionLocations().Change(null, null, null, "", "");
             Trace.TraceInformation(FormattableString.Invariant($"Setting version to {version} and committing"));
             WriteToVersionLocations(version);
             StageChanges();
@@ -130,7 +152,7 @@ namespace Verbot
             CheckVersionIsReleaseOrMasterPrerelease();
             CheckOnCorrectMasterBranchForVersion();
 
-            var currentVersion = GetVersion();
+            var currentVersion = ReadFromVersionLocations();
             var currentMinorVersion = currentVersion.Change(null, null, 0, "", "");
             var currentBranch = GetBranch();
             var onMaster = (currentBranch == "master");
@@ -181,28 +203,6 @@ namespace Verbot
             WriteToVersionLocations(nextVersion);
             StageChanges();
             Commit(FormattableString.Invariant($"Increment {incrementedComponent} version to {nextVersion}"));
-        }
-
-
-        public SemVersion GetVersion()
-        {
-            CheckLocal();
-
-            var locations = FindVersionLocations();
-
-            var version =
-                locations
-                    .Select(l => l.GetVersion())
-                    .Where(v => v != null)
-                    .Distinct()
-                    .SingleOrDefault();
-
-            if (version == null)
-            {
-                throw new UserException("No version recorded in repository");
-            }
-
-            return version;
         }
 
 
@@ -334,7 +334,7 @@ namespace Verbot
 
         void CheckVersionHasNotBeenReleased()
         {
-            var releaseVersion = GetVersion().Change(null, null, null, "", "");
+            var releaseVersion = ReadFromVersionLocations().Change(null, null, null, "", "");
             if (GetTags().Any(t => t.Name == releaseVersion))
                 throw new UserException("Current version has already been released");
         }
@@ -342,7 +342,7 @@ namespace Verbot
 
         void CheckVersionIsMasterPrerelease()
         {
-            var version = GetVersion();
+            var version = ReadFromVersionLocations();
             if (version.Prerelease != "master")
                 throw new UserException("Expected current version to be a -master prerelease");
         }
@@ -350,7 +350,7 @@ namespace Verbot
 
         void CheckVersionIsReleaseOrMasterPrerelease()
         {
-            var version = GetVersion();
+            var version = ReadFromVersionLocations();
             if (!(version.Prerelease == "" || version.Prerelease == "master"))
                 throw new UserException("Expected current version to be a release or -master prerelease");
         }
@@ -366,7 +366,7 @@ namespace Verbot
 
         void CheckOnCorrectMasterBranchForVersion()
         {
-            var minorVersion = GetVersion().Change(null, null, 0, "", "");
+            var minorVersion = ReadFromVersionLocations().Change(null, null, 0, "", "");
             var expectedCurrentBranch =
                 FindMasterBranches()
                     .Where(mb => mb.Version == minorVersion)
@@ -382,7 +382,7 @@ namespace Verbot
         void CheckNotSkippingRelease(bool major, bool minor)
         {
             var patch = !(major || minor);
-            var version = GetVersion();
+            var version = ReadFromVersionLocations();
             if (version.Prerelease != "master") return;
             var patchString = FormattableString.Invariant($"{version.Major}.{version.Minor}.{version.Patch}");
             var minorString = FormattableString.Invariant($"{version.Major}.{version.Minor}");
@@ -641,7 +641,7 @@ namespace Verbot
 
         SemVersion CalculateNextVersion(bool major, bool minor)
         {
-            var v = GetVersion().Change(null, null, null, "master", "");
+            var v = ReadFromVersionLocations().Change(null, null, null, "master", "");
             return
                 major ?
                     v.Change(v.Major + 1, 0, 0, null, null)

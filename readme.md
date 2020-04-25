@@ -76,7 +76,7 @@ Commands
     calc [--verbose]
     calc --release [--verbose]
     calc --prerelease [--verbose]
-        Output the current version number
+        Calculate and output the current version number
 
         Details on how version numbers are calculated can be found in the
         "Version Calculation" section.
@@ -121,13 +121,11 @@ Commands
             Output diagnostic information about how the version number is
             calculated.
 
-    get
-        Get the current version number
+    read
+        Output the version number currently recorded in source code files
 
-        The version number is read from `Version` properties in project files.
-
-        The operation fails if no `Version` properties are found, or if they
-        contain conflicting version numbers.
+        Details on where version numbers are recorded in source code files can
+        be found in the "Versions in Source Code" section.
 
     increment --major
     increment --minor

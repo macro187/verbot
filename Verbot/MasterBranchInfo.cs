@@ -46,7 +46,7 @@ namespace Verbot
                 try
                 {
                     Repository.Checkout(Name);
-                    version = Repository.GetVersion();
+                    version = Repository.ReadFromVersionLocations();
                 }
                 finally
                 {
