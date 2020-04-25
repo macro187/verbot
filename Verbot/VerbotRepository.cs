@@ -44,6 +44,30 @@ namespace Verbot
         }
 
 
+        public SemVersion WriteVersion(bool verbose)
+        {
+            var version = CalculateVersion(verbose);
+            WriteToVersionLocations(version);
+            return version;
+        }
+
+
+        public SemVersion WriteReleaseVersion(bool verbose)
+        {
+            var version = CalculateReleaseVersion(verbose);
+            WriteToVersionLocations(version);
+            return version;
+        }
+
+
+        public SemVersion WritePrereleaseVersion(bool verbose)
+        {
+            var version = CalculatePrereleaseVersion(verbose);
+            WriteToVersionLocations(version);
+            return version;
+        }
+
+
         public void Release()
         {
             CheckLocal();
@@ -57,7 +81,7 @@ namespace Verbot
             // Set release version and commit
             var version = GetVersion().Change(null, null, null, "", "");
             Trace.TraceInformation(FormattableString.Invariant($"Setting version to {version} and committing"));
-            SetVersion(version);
+            WriteToVersionLocations(version);
             StageChanges();
             Commit(FormattableString.Invariant($"Release version {version.ToString()}"));
 
@@ -154,22 +178,9 @@ namespace Verbot
             var incrementedComponent = major ? "major" : minor ? "minor" : "patch";
             Trace.TraceInformation(FormattableString.Invariant(
                 $"Incrementing {incrementedComponent} version to {nextVersion} and committing"));
-            SetVersion(nextVersion);
+            WriteToVersionLocations(nextVersion);
             StageChanges();
             Commit(FormattableString.Invariant($"Increment {incrementedComponent} version to {nextVersion}"));
-        }
-
-
-        public void SetVersion(SemVersion version)
-        {
-            Guard.NotNull(version, nameof(version));
-
-            CheckForVersionLocations();
-
-            foreach (var location in FindVersionLocations())
-            {
-                location.SetVersion(version);
-            }
         }
 
 
@@ -236,6 +247,19 @@ namespace Verbot
             CheckForRemoteBranchesAtUnknownCommits(verbotBranchesWithRemote);
             CheckForRemoteBranchesNotBehindLocal(verbotBranchesWithRemote);
             CheckForIncorrectRemoteTags(verbotTagsWithRemote);
+        }
+
+
+        void WriteToVersionLocations(SemVersion version)
+        {
+            Guard.NotNull(version, nameof(version));
+
+            CheckForVersionLocations();
+
+            foreach (var location in FindVersionLocations())
+            {
+                location.SetVersion(version);
+            }
         }
 
 

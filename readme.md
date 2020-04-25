@@ -1,8 +1,7 @@
 verbot
 ======
 
-A tool for managing version numbers for C# projects using Semantic Versioning
-and Git
+    A tool for managing version numbers using Semantic Versioning and Git
 
 
 
@@ -77,21 +76,46 @@ Commands
     calc [--verbose]
     calc --release [--verbose]
     calc --prerelease [--verbose]
-        Calculate the current commit's version number.
+        Output the current version number
 
-        If the current commit is tagged with a release version, output that.
-        Otherwise, compute and output a unique pre-release version as
-        described in the "Version Computation Scheme" section.
+        Details on how version numbers are calculated can be found in the
+        "Version Calculation" section.
 
         --release
-            Output a release version number.  If the current commit hasn't
-            been tagged as a release, output the release version it would be
-            if it were.
+            Always output a release version number.  If the current commit
+            hasn't been tagged as a release, output a release version as if it
+            was.
 
         --prerelease
-            Output a pre-release version number.  If the current commit has
-            been tagged as a release, output the pre-release version it would
-            be if it wasn't.
+            Always output a pre-release version number.  If the current commit
+            has been tagged as a release, output a pre-release version as if
+            it wasn't.
+
+        --verbose
+            Output diagnostic information about how the version number is
+            calculated.
+
+    write [--verbose]
+    write --release [--verbose]
+    write --prerelease [--verbose]
+        Record the current version number in source code files, and then
+        output it
+
+        Details on how version numbers are calculated can be found in the
+        "Version Calculation" section.
+
+        Details on where version numbers are recorded in source code files can
+        be found in the "Versions in Source Code" section.
+
+        --release
+            Always output a release version number.  If the current commit
+            hasn't been tagged as a release, output a release version as if it
+            was.
+
+        --prerelease
+            Always output a pre-release version number.  If the current commit
+            has been tagged as a release, output a pre-release version as if
+            it wasn't.
 
         --verbose
             Output diagnostic information about how the version number is
@@ -104,18 +128,6 @@ Commands
 
         The operation fails if no `Version` properties are found, or if they
         contain conflicting version numbers.
-
-    set <version>
-        Set the current version number
-
-        The version number is set by adjusting various project version
-        properties:
-
-            `Version`s are set to the full semantic version number
-
-            `AssemblyFileVersion`s are set to MAJOR.MINOR.PATCH.0
-
-            `AssemblyVersion`s are set to MAJOR.0.0.0
 
     increment --major
     increment --minor
@@ -198,10 +210,15 @@ Commands
 
 
 
-Version Computation Scheme
-==========================
+Version Calculation
+===================
 
-    Verbot computes versions by working forward from the previous tagged
+    Commits tagged as releases simply take their version numbers directly from
+    the release tags.
+
+    All other commits need to have their version numbers calculated.
+
+    Verbot calculates versions by working forward from the previous tagged
     release, taking into account whether there have been any major or minor
     changes, the number of commits, the current commit date, and the current
     commit hash.
@@ -222,16 +239,30 @@ Version Computation Scheme
 
 
 
+Versions in Source Code
+=======================
+
+    .NET Projects
+        Version numbers are recorded in properties in `.csproj` files.
+
+            `<Version>` properties contain full semantic version numbers
+
+            `<AssemblyFileVersion>` properties contain MAJOR.MINOR.PATCH.0
+
+            `<AssemblyVersion>` properties contain MAJOR.0.0.0
+
+
+
 License
 =======
 
-MIT License <https://github.com/macro187/verbot/blob/master/license.txt>
+    MIT License <https://github.com/macro187/verbot/blob/master/license.txt>
 
 
 
 Copyright
 =========
 
-Copyright (c) 2017-2020  
-Ron MacNeil <https://github.com/macro187>
+    Copyright (c) 2017-2020
+    Ron MacNeil <https://github.com/macro187>
 

@@ -47,10 +47,10 @@ namespace Verbot
                     return Help(args);
                 case "calc":
                     return Calc(args);
+                case "write":
+                    return Write(args);
                 case "get":
                     return Get(args);
-                case "set":
-                    return Set(args);
                 case "increment":
                     return Increment(args);
                 case "release":
@@ -135,6 +135,49 @@ namespace Verbot
         }
 
 
+        static int Write(Queue<string> args)
+        {
+            var repository = GetCurrentRepository();
+
+            var verbose = false;
+            var release = false;
+            var prerelease = false;
+            while (args.Count > 0)
+            {
+                var arg = args.Dequeue();
+                switch (arg)
+                {
+                    case "--release":
+                        release = true;
+                        break;
+                    case "--prerelease":
+                        prerelease = true;
+                        break;
+                    case "--verbose":
+                        verbose = true;
+                        break;
+                    default:
+                        throw new UserException("Unrecognised argument: " + arg);
+                }
+            }
+
+            if (release && prerelease)
+            {
+                throw new UserException("Can't calculate --release and --prerelease version at the same time");
+            }
+
+            var version =
+                release
+                    ? repository.WriteReleaseVersion(verbose)
+                : prerelease
+                    ? repository.WritePrereleaseVersion(verbose)
+                    : repository.WriteVersion(verbose);
+
+            Console.Out.WriteLine(version.ToString());
+            return 0;
+        }
+
+
         static int Get(Queue<string> args)
         {
             var repository = GetCurrentRepository();
@@ -143,22 +186,6 @@ namespace Verbot
 
             var version = repository.GetVersion();
             Console.Out.WriteLine(version.ToString());
-            return 0;
-        }
-
-
-        static int Set(Queue<string> args)
-        {
-            var repository = GetCurrentRepository();
-
-            SemVersion version;
-            if (args.Count == 0) throw new UserException("Expected <version>");
-            if (!SemVersion.TryParse(args.Dequeue(), out version))
-                throw new UserException("Expected <version> in semver format");
-
-            if (args.Count > 0) throw new UserException("Unexpected arguments");
-
-            repository.SetVersion(version);
             return 0;
         }
 
