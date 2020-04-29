@@ -101,6 +101,21 @@ namespace Verbot
 
         public void Release()
         {
+            var version = CalculateReleaseVersion(false);
+
+            var releaseTags = FindReleaseTags();
+            if (releaseTags.Any(tag => tag.Version == version))
+            {
+                throw new UserException($"Version {version} has already been released");
+            }
+
+            Trace.TraceInformation($"Tagging {version}");
+            CreateTag(new GitCommitName(version));
+        }
+
+
+        void OldRelease()
+        {
             CheckLocal();
 
             CheckNoUncommittedChanges();

@@ -53,10 +53,10 @@ namespace Verbot
                     return Reset(args);
                 case "read":
                     return Read(args);
-                case "increment":
-                    return Increment(args);
                 case "release":
                     return Release(args);
+                case "increment":
+                    return Increment(args);
                 case "push":
                     return Push(args);
                 case "check":
