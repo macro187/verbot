@@ -12,21 +12,29 @@ using MacroSystem;
 
 namespace Verbot
 {
-    internal class VerbotRepository : GitRepository
+    internal class VerbotRepository
     {
 
-        public VerbotRepository(string path) : base(path)
+        static readonly SemVersion DefaultVersion = new SemVersion(9999, 0, 0, "alpha");
+
+
+        readonly GitRepository GitRepository;
+        readonly VisualStudioSolution Solution;
+
+
+        public VerbotRepository(GitRepository gitRepository)
         {
-            Solution =
-                VisualStudioSolution.Find(Path)
-                ?? throw new UserException("No Visual Studio solution found in repository");
+            Guard.NotNull(gitRepository, nameof(gitRepository));
+
+            var solution = VisualStudioSolution.Find(gitRepository.Path);
+            if (solution == null)
+            {
+                throw new UserException("No Visual Studio solution found in repository");
+            }
+
+            GitRepository = gitRepository;
+            Solution = solution;
         }
-
-
-        public static readonly SemVersion DefaultVersion = new SemVersion(9999, 0, 0, "alpha");
-
-
-        public VisualStudioSolution Solution { get; }
 
 
         public SemVersion CalculateVersion(bool verbose)
@@ -110,7 +118,7 @@ namespace Verbot
             }
 
             Trace.TraceInformation($"Tagging {version}");
-            CreateTag(new GitCommitName(version));
+            GitRepository.CreateTag(new GitCommitName(version));
         }
 
 
@@ -128,17 +136,17 @@ namespace Verbot
             var version = ReadFromVersionLocations().Change(null, null, null, "", "");
             Trace.TraceInformation(FormattableString.Invariant($"Setting version to {version} and committing"));
             WriteToVersionLocations(version);
-            StageChanges();
-            Commit(FormattableString.Invariant($"Release version {version.ToString()}"));
+            GitRepository.StageChanges();
+            GitRepository.Commit(FormattableString.Invariant($"Release version {version.ToString()}"));
 
             // Tag MAJOR.MINOR.PATCH
             Trace.TraceInformation("Tagging " + version.ToString());
-            CreateTag(new GitCommitName(version.ToString()));
+            GitRepository.CreateTag(new GitCommitName(version.ToString()));
 
             // Set MAJOR.MINOR-latest branch
             var majorMinorLatestBranch = FormattableString.Invariant($"{version.Major}.{version.Minor}-latest");
             Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorMinorLatestBranch}"));
-            CreateOrMoveBranch(new GitCommitName(majorMinorLatestBranch));
+            GitRepository.CreateOrMoveBranch(new GitCommitName(majorMinorLatestBranch));
 
             // Set MAJOR-latest branch
             var minorVersion = version.Change(null, null, 0, "", "");
@@ -149,7 +157,7 @@ namespace Verbot
             {
                 var majorLatestBranch = FormattableString.Invariant($"{version.Major}-latest");
                 Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorLatestBranch}"));
-                CreateOrMoveBranch(new GitCommitName(majorLatestBranch));
+                GitRepository.CreateOrMoveBranch(new GitCommitName(majorLatestBranch));
             }
 
             // Set latest branch
@@ -159,7 +167,7 @@ namespace Verbot
             if (isLatestMajorMinorLatestBranch && isLatestMajorLatestBranch)
             {
                 Trace.TraceInformation(FormattableString.Invariant($"Setting branch latest"));
-                CreateOrMoveBranch(new GitCommitName("latest"));
+                GitRepository.CreateOrMoveBranch(new GitCommitName("latest"));
             }
 
             // Increment to next patch version
@@ -178,7 +186,7 @@ namespace Verbot
 
             var currentVersion = ReadFromVersionLocations();
             var currentMinorVersion = currentVersion.Change(null, null, 0, "", "");
-            var currentBranch = GetBranch();
+            var currentBranch = GitRepository.GetBranch();
             var onMaster = (currentBranch == "master");
             var masterBranches = FindMasterBranches();
             var nextVersion = CalculateNextVersion(major, minor);
@@ -201,7 +209,7 @@ namespace Verbot
                         $"{newBranchVersion.Major}.{newBranchVersion.Minor}-master"));
 
                     Trace.TraceInformation("Creating branch " + newBranch);
-                    CreateBranch(newBranch);
+                    GitRepository.CreateBranch(newBranch);
                 }
                 else
                 {
@@ -215,8 +223,8 @@ namespace Verbot
                         $"{newBranchVersion.Major}.{newBranchVersion.Minor}-master"));
 
                     Trace.TraceInformation("Creating and switching to branch " + newBranch);
-                    CreateBranch(newBranch);
-                    Checkout(newBranch);
+                    GitRepository.CreateBranch(newBranch);
+                    GitRepository.Checkout(newBranch);
                 }
             }
 
@@ -225,8 +233,9 @@ namespace Verbot
             Trace.TraceInformation(FormattableString.Invariant(
                 $"Incrementing {incrementedComponent} version to {nextVersion} and committing"));
             WriteToVersionLocations(nextVersion);
-            StageChanges();
-            Commit(FormattableString.Invariant($"Increment {incrementedComponent} version to {nextVersion}"));
+            GitRepository.StageChanges();
+            GitRepository.Commit(
+                FormattableString.Invariant($"Increment {incrementedComponent} version to {nextVersion}"));
         }
 
 
@@ -251,7 +260,7 @@ namespace Verbot
                 return;
             }
 
-            Push(refsToPush.Select(r => r.Name), dryRun: dryRun, echoOutput: true);
+            GitRepository.Push(refsToPush.Select(r => r.Name), dryRun: dryRun, echoOutput: true);
         }
 
 
@@ -351,7 +360,7 @@ namespace Verbot
 
         void CheckNoUncommittedChanges()
         {
-            if (HasUncommittedChanges())
+            if (GitRepository.HasUncommittedChanges())
                 throw new UserException("Uncommitted changes in repository");
         }
 
@@ -359,7 +368,7 @@ namespace Verbot
         void CheckVersionHasNotBeenReleased()
         {
             var releaseVersion = ReadFromVersionLocations().Change(null, null, null, "", "");
-            if (GetTags().Any(t => t.Name == releaseVersion))
+            if (GitRepository.GetTags().Any(t => t.Name == releaseVersion))
                 throw new UserException("Current version has already been released");
         }
 
@@ -398,7 +407,7 @@ namespace Verbot
                     .SingleOrDefault();
             if (expectedCurrentBranch == null)
                 throw new UserException("No master branch found for current version");
-            if (GetBranch() != expectedCurrentBranch)
+            if (GitRepository.GetBranch() != expectedCurrentBranch)
                 throw new UserException("Expected to be on branch " + expectedCurrentBranch);
         }
 
@@ -427,7 +436,7 @@ namespace Verbot
             var masterBranches = FindMasterBranches();
             if (masterBranches.Count == 0) return;
             var newMinorVersion = newVersion.Change(null, null, 0, "", "");
-            if (newMinorVersion > masterBranches.First().Version && GetBranch() != "master")
+            if (newMinorVersion > masterBranches.First().Version && GitRepository.GetBranch() != "master")
                 throw new UserException("Must be on master branch to advance to latest version");
         }
 
@@ -456,7 +465,7 @@ namespace Verbot
             var remoteBranchesAtUnknownCommits =
                 verbotBranchesWithRemote
                     .Where(b => b.RemoteId != null)
-                    .Where(b => !Exists(b.RemoteId))
+                    .Where(b => !GitRepository.Exists(b.RemoteId))
                     .ToList();
 
             if (!remoteBranchesAtUnknownCommits.Any()) return;
@@ -475,7 +484,7 @@ namespace Verbot
             var remoteBranchesNotBehindLocal =
                 verbotBranchesWithRemote
                     .Where(b => b.RemoteId != null)
-                    .Where(b => !IsAncestor(b.RemoteId, b.LocalId))
+                    .Where(b => !GitRepository.IsAncestor(b.RemoteId, b.LocalId))
                     .ToList();
 
             if (!remoteBranchesNotBehindLocal.Any()) return;
@@ -493,7 +502,7 @@ namespace Verbot
         IEnumerable<GitRefWithRemote> GetVerbotTagsWithRemote()
         {
             var verbotTags = FindReleaseTags();
-            var remoteTagsLookup = GetRemoteTags().ToDictionary(t => t.Name, t => t.Id);
+            var remoteTagsLookup = GitRepository.GetRemoteTags().ToDictionary(t => t.Name, t => t.Id);
 
             GitCommitName LookupRemoteId(GitCommitName name) =>
                 remoteTagsLookup.TryGetValue(name, out var id) ? id : null;
@@ -508,7 +517,7 @@ namespace Verbot
         IEnumerable<GitRefWithRemote> GetVerbotBranchesWithRemote()
         {
             var verbotBranches = GetVerbotBranches();
-            var remoteBranchesLookup = GetRemoteBranches().ToDictionary(b => b.Name, b => b.Id);
+            var remoteBranchesLookup = GitRepository.GetRemoteBranches().ToDictionary(b => b.Name, b => b.Id);
 
             GitCommitName LookupRemoteId(GitCommitName name) =>
                 remoteBranchesLookup.TryGetValue(name, out var id) ? id : null;
@@ -520,7 +529,7 @@ namespace Verbot
         }
 
 
-        SemVersion CalculateReleaseVersion(GitCommitName name, bool verbose)
+        public SemVersion CalculateReleaseVersion(GitCommitName name, bool verbose)
         {
             return
                 CalculateVersion(name, verbose)
@@ -530,7 +539,7 @@ namespace Verbot
 
         SemVersion CalculateVersion(GitCommitName name, bool verbose)
         {
-            var commitId = GetCommitId(name);
+            var commitId = GitRepository.GetCommitId(name);
             var releaseTags = FindReleaseTags().ToList();
 
             var versionFromTag =
@@ -561,12 +570,12 @@ namespace Verbot
                 Trace.TraceInformation($"{version} ({description})");
             }
 
-            var commitId = GetCommitId(name);
+            var commitId = GitRepository.GetCommitId(name);
 
             var mostRecentReleaseTag =
                 releaseTags
                     .Where(t => t.Id != commitId)
-                    .FirstOrDefault(t => IsAncestor(t.Name, name));
+                    .FirstOrDefault(t => GitRepository.IsAncestor(t.Name, name));
 
             if (mostRecentReleaseTag != null)
             {
@@ -579,12 +588,12 @@ namespace Verbot
                 TraceStep($"No previous release tags");
             }
 
-            var commitsSincePreviousRelease = ListCommits(mostRecentReleaseTag?.Name, name).ToList();
+            var commitsSincePreviousRelease = GitRepository.ListCommits(mostRecentReleaseTag?.Name, name).ToList();
             string firstMajorChangeId = null;
             string firstMinorChangeId = null;
             foreach (var id in commitsSincePreviousRelease)
             {
-                var message = GetCommitMessage(id);
+                var message = GitRepository.GetCommitMessage(id);
                 var lines = StringExtensions.SplitLines(message).Select(line => line.Trim()).ToList();
                 if (lines.Any(line => Regex.IsMatch(line, @"^\+semver:\s?(breaking|major)$")))
                 {
@@ -620,12 +629,12 @@ namespace Verbot
             version = version.Change(prerelease: $"{version.Prerelease}.{distance}");
             TraceStep($"Number of commit(s) since previous release");
 
-            var committerDate = GetCommitterDate(name).ToUniversalTime();
+            var committerDate = GitRepository.GetCommitterDate(name).ToUniversalTime();
             var committerDateIdentifier = committerDate.ToString("yyyyMMddTHHmmss");
             version = version.Change(prerelease: $"{version.Prerelease}.{committerDateIdentifier}");
             TraceStep($"Commit date");
 
-            var shortHash = GetShortCommitId(name, 4);
+            var shortHash = GitRepository.GetShortCommitId(name, 4);
             version = version.Change(prerelease: $"{version.Prerelease}.{shortHash}");
             TraceStep($"Short commit hash");
 
@@ -636,7 +645,7 @@ namespace Verbot
         IEnumerable<ReleaseTagInfo> FindReleaseTags()
         {
             return
-                GetTags()
+                GitRepository.GetTags()
                     .Where(t => IsReleaseVersionNumber(t.Name))
                     .Select(t => new ReleaseTagInfo(t.Name, SemVersion.Parse(t.Name), t.Id))
                     .OrderByDescending(t => t.Version)
@@ -647,7 +656,7 @@ namespace Verbot
         IEnumerable<GitRef> GetVerbotBranches()
         {
             return
-                GetBranches()
+                GitRepository.GetBranches()
                     .Where(b =>
                         MasterBranchInfo.IsMasterBranchName(b.Name) ||
                         b.Name == "latest" ||
@@ -709,7 +718,7 @@ namespace Verbot
         IList<MasterBranchInfo> FindMasterBranches()
         {
             return
-                GetBranches()
+                GitRepository.GetBranches()
                     .Where(b => MasterBranchInfo.IsMasterBranchName(b.Name))
                     .Select(b => new MasterBranchInfo(this, b.Name))
                     .OrderByDescending(b => b.Version)
@@ -724,7 +733,7 @@ namespace Verbot
         IList<MajorLatestBranchInfo> FindMajorLatestBranches()
         {
             return
-                GetBranches()
+                GitRepository.GetBranches()
                     .Where(b => MajorLatestBranchInfo.IsMajorLatestBranchName(b.Name))
                     .Select(b => new MajorLatestBranchInfo(this, b.Name))
                     .OrderByDescending(b => b.Version)
@@ -739,7 +748,7 @@ namespace Verbot
         IList<MajorMinorLatestBranchInfo> FindMajorMinorLatestBranches()
         {
             return
-                GetBranches()
+                GitRepository.GetBranches()
                     .Where(b => MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name))
                     .Select(b => new MajorMinorLatestBranchInfo(this, b.Name))
                     .OrderByDescending(b => b.Version)

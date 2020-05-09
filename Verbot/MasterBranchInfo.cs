@@ -42,16 +42,7 @@ namespace Verbot
             SemVersion version;
             if (Name == "master")
             {
-                var currentBranch = Repository.GetBranch();
-                try
-                {
-                    Repository.Checkout(Name);
-                    version = Repository.ReadFromVersionLocations();
-                }
-                finally
-                {
-                    Repository.Checkout(currentBranch);
-                }
+                version = Repository.CalculateReleaseVersion(Name, false);
                 version = version.Change(null, null, 0, "", "");
             }
             else

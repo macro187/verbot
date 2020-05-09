@@ -302,7 +302,7 @@ namespace Verbot
         {
             var repo = GitRepository.FindContainingRepository(Environment.CurrentDirectory);
             if (repo == null) throw new UserException("Not in a Git repository");
-            return new VerbotRepository(repo.Path);
+            return new VerbotRepository(repo);
         }
 
     }
