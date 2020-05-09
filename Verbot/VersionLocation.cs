@@ -9,7 +9,7 @@ namespace Verbot
     /// A location where the current version can be recorded
     /// </summary>
     ///
-    public class VersionLocation
+    class VersionLocation
     {
 
         public VersionLocation(VisualStudioProject project)

@@ -12,7 +12,7 @@ using MacroSystem;
 
 namespace Verbot
 {
-    internal class VerbotRepository
+    class VerbotRepository
     {
 
         static readonly SemVersion DefaultVersion = new SemVersion(9999, 0, 0, "alpha");

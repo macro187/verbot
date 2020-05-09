@@ -7,7 +7,7 @@ using MacroSemver;
 
 namespace Verbot
 {
-    internal class MajorLatestBranchInfo
+    class MajorLatestBranchInfo
     {
 
         public static bool IsMajorLatestBranchName(string name)
