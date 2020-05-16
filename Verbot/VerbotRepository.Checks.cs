@@ -16,6 +16,7 @@ namespace Verbot
             CheckForVersionLocations();
             CheckForConflictingVersions();
             CheckForMissingVersions();
+            CheckForMissingReleaseTags(FindReleaseTags());
         }
 
 
@@ -231,6 +232,66 @@ namespace Verbot
 
             throw new UserException("Remote branch(es) not behind local");
         }
+
+
+        void CheckForMissingReleaseTags(IEnumerable<ReleaseTagInfo> tags)
+        {
+            var allVersions = new HashSet<SemVersion>(tags.Select(tag => tag.Version));
+            var missingVersions = new List<SemVersion>();
+
+            var latestVersion = allVersions.Max();
+            for (var major = 1; major <= latestVersion.Major; major++)
+            {
+                var v = new SemVersion(major, 0, 0);
+                if (!allVersions.Contains(v))
+                {
+                    missingVersions.Add(v);
+                }
+            }
+
+            var latestMinorVersions =
+                allVersions
+                    .GroupBy(v => v.Change(minor: 0, patch: 0))
+                    .Select(g => g.Max())
+                    .OrderBy(v => v);
+            foreach (var latestMinorVersion in latestMinorVersions)
+            {
+                for (var minor = 1; minor <= latestMinorVersion.Minor; minor++)
+                {
+                    var v = latestMinorVersion.Change(minor: minor, patch: 0);
+                    if (!allVersions.Contains(v))
+                    {
+                        missingVersions.Add(v);
+                    }
+                }
+            }
+
+            var latestPatchVersions =
+                allVersions
+                    .GroupBy(v => v.Change(patch: 0))
+                    .Select(g => g.Max())
+                    .OrderBy(v => v);
+            foreach (var latestPatchVersion in latestPatchVersions)
+            {
+                for (var patch = 1; patch < latestPatchVersion.Patch; patch++)
+                {
+                    var v = latestPatchVersion.Change(patch: patch);
+                    if (!allVersions.Contains(v))
+                    {
+                        missingVersions.Add(v);
+                    }
+                }
+            }
+
+            if (missingVersions.Any())
+            {
+                foreach (var missingVersion in missingVersions.OrderBy(v => v))
+                {
+                    Trace.TraceWarning($"Missing {missingVersion} release tag");
+                }
+            }
+        }
+
 
     }
 }
