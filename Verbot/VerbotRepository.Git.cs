@@ -12,33 +12,49 @@ namespace Verbot
     partial class VerbotRepository
     {
 
-        IEnumerable<GitRefWithRemote> FindReleaseTagsWithRemote()
+        IDictionary<GitSha1, VerbotCommitInfo> CommitInfoCache =
+            new Dictionary<GitSha1, VerbotCommitInfo>();
+
+
+        VerbotCommitInfo GetHeadCommit() =>
+            FindCommit(new GitRev("HEAD")) ?? throw new InvalidOperationException("No HEAD commit");
+
+
+        VerbotCommitInfo FindCommit(GitRev rev) =>
+            GitRepository.TryGetCommitId(rev, out var sha1) ? GetCommit(sha1) : null;
+
+
+        VerbotCommitInfo GetCommit(GitSha1 sha1)
         {
-            var verbotTags = FindReleaseTags();
-            var remoteRefsLookup = GitRepository.GetRemoteRefs().ToDictionary(r => r.FullName, r => r.Target);
+            if (!CommitInfoCache.ContainsKey(sha1))
+            {
+                CommitInfoCache.Add(sha1, new VerbotCommitInfo(GitRepository, sha1));
+            }
 
-            GitSha1 LookupRemoteTarget(GitFullRefName fullName) =>
-                remoteRefsLookup.TryGetValue(fullName, out var target) ? target : null;
-
-            return
-                verbotTags
-                    .Select(t => new GitRefWithRemote(t.Ref, LookupRemoteTarget(t.FullName)))
-                    .ToList();
+            return CommitInfoCache[sha1];
         }
 
 
-        IEnumerable<GitRefWithRemote> GetVerbotBranchesWithRemote()
+        IEnumerable<VerbotCommitInfo> GetCommits(IEnumerable<GitSha1> sha1s) =>
+            sha1s.Select(s => GetCommit(s));
+
+
+        IEnumerable<GitRefWithRemote> FindReleaseTagsWithRemote() =>
+            GetRemoteInfo(FindReleaseTags().Select(t => t.Ref)).ToList();
+
+
+        IEnumerable<GitRefWithRemote> GetVerbotBranchesWithRemote() =>
+            GetRemoteInfo(GetVerbotBranches()).ToList();
+
+
+        IEnumerable<GitRefWithRemote> GetRemoteInfo(IEnumerable<GitRef> refs)
         {
-            var verbotBranches = GetVerbotBranches();
-            var remoteBranchesLookup = GitRepository.GetRemoteBranches().ToDictionary(b => b.FullName, b => b.Target);
+            var remoteRefs = GitRepository.GetRemoteRefs().ToDictionary(r => r.FullName, r => r.Target);
 
             GitSha1 LookupRemoteTarget(GitFullRefName fullName) =>
-                remoteBranchesLookup.TryGetValue(fullName, out var target) ? target : null;
+                remoteRefs.TryGetValue(fullName, out var target) ? target : null;
 
-            return
-                verbotBranches
-                    .Select(b => new GitRefWithRemote(b, LookupRemoteTarget(b.FullName)))
-                    .ToList();
+            return refs.Select(r => new GitRefWithRemote(r, LookupRemoteTarget(r.FullName)));
         }
 
 
@@ -54,7 +70,7 @@ namespace Verbot
                     .Where(tag => tag.Version != null)
                     .Where(tag => tag.Version.Prerelease == "")
                     .Where(tag => tag.Version.Build == "")
-                    .Select(tag => new ReleaseTagInfo(tag.Ref, tag.Version))
+                    .Select(tag => new ReleaseTagInfo(tag.Ref, tag.Version, GetCommit(tag.Ref.Target)))
                     .OrderByDescending(tag => tag.Version)
                     .ToList();
         }
@@ -104,7 +120,9 @@ namespace Verbot
 
             if (@ref.Name == "master")
             {
-                return CalculateReleaseVersion(@ref.Target, false).Change(null, null, 0, "", "");
+                return
+                    CalculateReleaseVersion(GetCommit(@ref.Target), false)
+                        .Change(null, null, 0, "", "");
             }
 
             var match = Regex.Match(@ref.Name, @"^(\d+)\.(\d+)-master$");
@@ -169,18 +187,23 @@ namespace Verbot
 
         class ReleaseTagInfo
         {
-            public ReleaseTagInfo(GitRef @ref, SemVersion version)
+            public ReleaseTagInfo(GitRef @ref, SemVersion version, VerbotCommitInfo target)
             {
+                Guard.NotNull(@ref, nameof(@ref));
                 if (!@ref.IsTag) throw new ArgumentException("Not a tag", nameof(@ref));
+                Guard.NotNull(version, nameof(version));
+                Guard.NotNull(target, nameof(target));
+
                 Ref = @ref;
                 Version = version;
+                Target = target;
             }
 
             public GitRef Ref { get; }
+            public SemVersion Version { get; }
+            public VerbotCommitInfo Target { get; }
             public GitRefNameComponent Name => Ref.Name;
             public GitFullRefName FullName => Ref.FullName;
-            public GitSha1 Target => Ref.Target;
-            public SemVersion Version { get; }
         }
 
     }
