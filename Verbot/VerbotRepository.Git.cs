@@ -2,24 +2,27 @@ using System.Linq;
 using MacroGit;
 using MacroSemver;
 using System.Collections.Generic;
+using System;
+using MacroGuards;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace Verbot
 {
     partial class VerbotRepository
     {
 
-        IEnumerable<GitRefWithRemote> GetVerbotTagsWithRemote()
+        IEnumerable<GitRefWithRemote> FindReleaseTagsWithRemote()
         {
             var verbotTags = FindReleaseTags();
-            var remoteTagsLookup = GitRepository.GetRemoteTags().ToDictionary(t => t.Name, t => t.Id);
+            var remoteRefsLookup = GitRepository.GetRemoteRefs().ToDictionary(r => r.FullName, r => r.Target);
 
-            GitCommitName LookupRemoteId(GitCommitName name) =>
-                remoteTagsLookup.TryGetValue(name, out var id) ? id : null;
+            GitSha1 LookupRemoteTarget(GitFullRefName fullName) =>
+                remoteRefsLookup.TryGetValue(fullName, out var target) ? target : null;
 
             return
                 verbotTags
-                    .Select(t => new GitRefWithRemote(t.Name, t.Id, LookupRemoteId(t.Name)))
+                    .Select(t => new GitRefWithRemote(t.Ref, LookupRemoteTarget(t.FullName)))
                     .ToList();
         }
 
@@ -27,14 +30,14 @@ namespace Verbot
         IEnumerable<GitRefWithRemote> GetVerbotBranchesWithRemote()
         {
             var verbotBranches = GetVerbotBranches();
-            var remoteBranchesLookup = GitRepository.GetRemoteBranches().ToDictionary(b => b.Name, b => b.Id);
+            var remoteBranchesLookup = GitRepository.GetRemoteBranches().ToDictionary(b => b.FullName, b => b.Target);
 
-            GitCommitName LookupRemoteId(GitCommitName name) =>
-                remoteBranchesLookup.TryGetValue(name, out var id) ? id : null;
+            GitSha1 LookupRemoteTarget(GitFullRefName fullName) =>
+                remoteBranchesLookup.TryGetValue(fullName, out var target) ? target : null;
 
             return
                 verbotBranches
-                    .Select(t => new GitRefWithRemote(t.Name, t.Id, LookupRemoteId(t.Name)))
+                    .Select(b => new GitRefWithRemote(b, LookupRemoteTarget(b.FullName)))
                     .ToList();
         }
 
@@ -43,9 +46,16 @@ namespace Verbot
         {
             return
                 GitRepository.GetTags()
-                    .Where(t => IsReleaseVersionNumber(t.Name))
-                    .Select(t => new ReleaseTagInfo(t.Name, SemVersion.Parse(t.Name), t.Id))
-                    .OrderByDescending(t => t.Version)
+                    .Select(tag =>
+                    {
+                        SemVersion.TryParse(tag.Name, out var version, true);
+                        return (Ref: tag, Version: version);
+                    })
+                    .Where(tag => tag.Version != null)
+                    .Where(tag => tag.Version.Prerelease == "")
+                    .Where(tag => tag.Version.Build == "")
+                    .Select(tag => new ReleaseTagInfo(tag.Ref, tag.Version))
+                    .OrderByDescending(tag => tag.Version)
                     .ToList();
         }
 
@@ -55,7 +65,7 @@ namespace Verbot
             return
                 GitRepository.GetBranches()
                     .Where(b =>
-                        MasterBranchInfo.IsMasterBranchName(b.Name) ||
+                        IsMasterBranch(b) ||
                         b.Name == "latest" ||
                         MajorLatestBranchInfo.IsMajorLatestBranchName(b.Name) ||
                         MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name))
@@ -72,10 +82,40 @@ namespace Verbot
         {
             return
                 GitRepository.GetBranches()
-                    .Where(b => MasterBranchInfo.IsMasterBranchName(b.Name))
-                    .Select(b => new MasterBranchInfo(this, b.Name))
+                    .Select(b => (Ref: b, Version: GetMasterBranchVersion(b)))
+                    .Where(b => b.Version != null)
+                    .Select(b => new MasterBranchInfo(b.Ref, b.Version))
                     .OrderByDescending(b => b.Version)
                     .ToList();
+        }
+
+
+        bool IsMasterBranch(GitRef @ref)
+        {
+            if (!@ref.IsBranch) return false;
+            return GetMasterBranchVersion(@ref) != null;
+        }
+
+
+        SemVersion GetMasterBranchVersion(GitRef @ref)
+        {
+            Guard.NotNull(@ref, nameof(@ref));
+            if (@ref.IsBranch) throw new ArgumentException("Not a branch", nameof(@ref));
+
+            if (@ref.Name == "master")
+            {
+                return CalculateReleaseVersion(@ref.Target, false).Change(null, null, 0, "", "");
+            }
+
+            var match = Regex.Match(@ref.Name, @"^(\d+)\.(\d+)-master$");
+            if (match.Success)
+            {
+                return new SemVersion(
+                    int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture),
+                    int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture));
+            }
+
+            return null;
         }
 
 
@@ -88,7 +128,7 @@ namespace Verbot
             return
                 GitRepository.GetBranches()
                     .Where(b => MajorLatestBranchInfo.IsMajorLatestBranchName(b.Name))
-                    .Select(b => new MajorLatestBranchInfo(this, b.Name))
+                    .Select(b => new MajorLatestBranchInfo(b))
                     .OrderByDescending(b => b.Version)
                     .ToList();
         }
@@ -103,45 +143,44 @@ namespace Verbot
             return
                 GitRepository.GetBranches()
                     .Where(b => MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name))
-                    .Select(b => new MajorMinorLatestBranchInfo(this, b.Name))
+                    .Select(b => new MajorMinorLatestBranchInfo(b))
                     .OrderByDescending(b => b.Version)
                     .ToList();
         }
 
 
-        static bool IsReleaseVersionNumber(string value)
-        {
-            return Regex.IsMatch(value, @"^\d+\.\d+\.\d+$");
-        }
-
-
         class GitRefWithRemote
         {
-            public GitRefWithRemote(GitCommitName name, GitCommitName localId, GitCommitName remoteId)
+            public GitRefWithRemote(GitRef @ref, GitSha1 remoteTarget)
             {
-                Name = name;
-                LocalId = localId;
-                RemoteId = remoteId;
+                Ref = @ref;
+                RemoteTarget = remoteTarget;
             }
 
-            public GitCommitName Name { get; }
-            public GitCommitName LocalId { get; }
-            public GitCommitName RemoteId { get; }
+            public GitRef Ref { get; }
+            public GitRefNameComponent Name => Ref.Name;
+            public GitFullRefName FullName => Ref.FullName;
+            public GitSha1 Target => Ref.Target;
+            public bool IsBranch => Ref.IsBranch;
+            public bool IsTag => Ref.IsTag;
+            public GitSha1 RemoteTarget { get; }
         }
 
 
         class ReleaseTagInfo
         {
-            public ReleaseTagInfo(GitCommitName name, SemVersion version, GitCommitName id)
+            public ReleaseTagInfo(GitRef @ref, SemVersion version)
             {
-                Name = name;
+                if (!@ref.IsTag) throw new ArgumentException("Not a tag", nameof(@ref));
+                Ref = @ref;
                 Version = version;
-                Id = id;
             }
 
-            public GitCommitName Name { get; }
+            public GitRef Ref { get; }
+            public GitRefNameComponent Name => Ref.Name;
+            public GitFullRefName FullName => Ref.FullName;
+            public GitSha1 Target => Ref.Target;
             public SemVersion Version { get; }
-            public GitCommitName Id { get; }
         }
 
     }

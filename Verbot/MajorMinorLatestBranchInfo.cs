@@ -21,21 +21,22 @@ namespace Verbot
         const string Pattern = @"^(\d+)\.(\d+)-latest$";
 
 
-        public MajorMinorLatestBranchInfo(VerbotRepository repository, GitCommitName name)
+        public MajorMinorLatestBranchInfo(GitRef branch)
         {
-            Guard.NotNull(repository, nameof(repository));
-            var match = Regex.Match(name, Pattern);
-            if (!match.Success) throw new ArgumentException("Not a MAJOR.MINOR-latest branch name", "name");
-            Repository = repository;
-            Name = name;
+            Guard.NotNull(branch, nameof(branch));
+            if (!branch.IsBranch) throw new ArgumentException("Not a branch", nameof(branch));
+
+            var match = Regex.Match(branch.Name, Pattern);
+            if (!match.Success) throw new ArgumentException("Not a MAJOR.MINOR-latest branch", nameof(branch));
+
+            Branch = branch;
             Version = new SemVersion(
                 int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture),
                 int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture));
         }
 
 
-        public VerbotRepository Repository { get; }
-        public GitCommitName Name { get; }
+        public GitRef Branch { get; }
         public SemVersion Version { get; }
 
     }

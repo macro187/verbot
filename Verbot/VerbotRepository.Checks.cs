@@ -23,7 +23,7 @@ namespace Verbot
         public void CheckRemote()
         {
             var verbotBranchesWithRemote = GetVerbotBranchesWithRemote();
-            var verbotTagsWithRemote = GetVerbotTagsWithRemote();
+            var verbotTagsWithRemote = FindReleaseTagsWithRemote();
 
             CheckForRemoteBranchesAtUnknownCommits(verbotBranchesWithRemote);
             CheckForRemoteBranchesNotBehindLocal(verbotBranchesWithRemote);
@@ -180,15 +180,15 @@ namespace Verbot
         {
             var incorrectRemoteTags =
                 verbotTagsWithRemote
-                    .Where(t => t.RemoteId != null)
-                    .Where(t => t.RemoteId != t.LocalId)
+                    .Where(t => t.RemoteTarget != null)
+                    .Where(t => t.RemoteTarget != t.Target)
                     .ToList();
 
             if (!incorrectRemoteTags.Any()) return;
 
             foreach (var tag in incorrectRemoteTags)
             {
-                Trace.TraceError($"Remote tag {tag.Name} at {tag.RemoteId} local {tag.LocalId}");
+                Trace.TraceError($"Remote tag {tag.Name} at {tag.RemoteTarget} local {tag.Target}");
             }
 
             throw new UserException("Incorrect remote tag(s) found");
@@ -199,15 +199,15 @@ namespace Verbot
         {
             var remoteBranchesAtUnknownCommits =
                 verbotBranchesWithRemote
-                    .Where(b => b.RemoteId != null)
-                    .Where(b => !GitRepository.Exists(b.RemoteId))
+                    .Where(b => b.RemoteTarget != null)
+                    .Where(b => !GitRepository.Exists(b.RemoteTarget))
                     .ToList();
 
             if (!remoteBranchesAtUnknownCommits.Any()) return;
 
             foreach (var branch in remoteBranchesAtUnknownCommits)
             {
-                Trace.TraceError($"Remote branch {branch.Name} at unknown commit {branch.RemoteId}");
+                Trace.TraceError($"Remote branch {branch.Name} at unknown commit {branch.RemoteTarget}");
             }
 
             throw new UserException("Remote branch(es) at unknown commits");
@@ -218,8 +218,8 @@ namespace Verbot
         {
             var remoteBranchesNotBehindLocal =
                 verbotBranchesWithRemote
-                    .Where(b => b.RemoteId != null)
-                    .Where(b => !GitRepository.IsAncestor(b.RemoteId, b.LocalId))
+                    .Where(b => b.RemoteTarget != null)
+                    .Where(b => !GitRepository.IsAncestor(b.RemoteTarget, b.Target))
                     .ToList();
 
             if (!remoteBranchesNotBehindLocal.Any()) return;
@@ -227,7 +227,7 @@ namespace Verbot
             foreach (var branch in remoteBranchesNotBehindLocal)
             {
                 Trace.TraceError(
-                    $"Remote branch {branch.Name} at {branch.RemoteId} not behind local at {branch.LocalId}");
+                    $"Remote branch {branch.Name} at {branch.RemoteTarget} not behind local at {branch.Target}");
             }
 
             throw new UserException("Remote branch(es) not behind local");

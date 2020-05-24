@@ -21,19 +21,18 @@ namespace Verbot
         const string Pattern = @"^(\d+)-latest$";
 
 
-        public MajorLatestBranchInfo(VerbotRepository repository, GitCommitName name)
+        public MajorLatestBranchInfo(GitRef @ref)
         {
-            Guard.NotNull(repository, nameof(repository));
-            var match = Regex.Match(name, Pattern);
-            if (!match.Success) throw new ArgumentException("Not a MAJOR-latest branch name", "name");
-            Repository = repository;
-            Name = name;
+            Guard.NotNull(@ref, nameof(@ref));
+            var match = Regex.Match(@ref.Name, Pattern);
+            if (!match.Success) throw new ArgumentException("Not a MAJOR-latest branch", nameof(@ref));
+            Ref = @ref;
             Version = new SemVersion(int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture));
         }
 
 
-        public VerbotRepository Repository { get; }
-        public GitCommitName Name { get; }
+        public GitRef Ref { get; }
+        public GitRefNameComponent Name => Ref.Name;
         public SemVersion Version { get; }
 
     }

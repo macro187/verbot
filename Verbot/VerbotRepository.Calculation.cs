@@ -13,54 +13,54 @@ namespace Verbot
 
         public SemVersion CalculateVersion(bool verbose)
         {
-            return CalculateVersion(new GitCommitName("HEAD"), verbose);
+            return CalculateVersion(new GitRev("HEAD"), verbose);
         }
 
 
-        public SemVersion CalculateVersion(GitCommitName name, bool verbose)
+        public SemVersion CalculateVersion(GitRev rev, bool verbose)
         {
-            var commitId = GitRepository.GetCommitId(name);
+            var sha1 = GitRepository.GetCommitId(rev);
             var releaseTags = FindReleaseTags().ToList();
 
             var versionFromTag =
                 releaseTags
-                    .Where(tag => tag.Id == commitId)
+                    .Where(tag => tag.Target == sha1)
                     .Select(tag => tag.Version)
                     .SingleOrDefault();
 
             return
                 versionFromTag ??
-                CalculatePrereleaseVersion(name, releaseTags, verbose);
+                CalculatePrereleaseVersion(rev, releaseTags, verbose);
         }
 
 
         public SemVersion CalculateReleaseVersion(bool verbose)
         {
-            return CalculateReleaseVersion(new GitCommitName("HEAD"), verbose);
+            return CalculateReleaseVersion(new GitRev("HEAD"), verbose);
         }
 
 
-        public SemVersion CalculateReleaseVersion(GitCommitName name, bool verbose)
+        public SemVersion CalculateReleaseVersion(GitRev rev, bool verbose)
         {
             return
-                CalculateVersion(name, verbose)
+                CalculateVersion(rev, verbose)
                     .Change(prerelease: "", build: "");
         }
 
 
         public SemVersion CalculatePrereleaseVersion(bool verbose)
         {
-            return CalculatePrereleaseVersion(new GitCommitName("HEAD"), verbose);
+            return CalculatePrereleaseVersion(new GitRev("HEAD"), verbose);
         }
 
 
-        public SemVersion CalculatePrereleaseVersion(GitCommitName name, bool verbose)
+        public SemVersion CalculatePrereleaseVersion(GitRev rev, bool verbose)
         {
-            return CalculatePrereleaseVersion(name, FindReleaseTags(), verbose);
+            return CalculatePrereleaseVersion(rev, FindReleaseTags(), verbose);
         }
 
 
-        SemVersion CalculatePrereleaseVersion(GitCommitName name, IEnumerable<ReleaseTagInfo> releaseTags, bool verbose)
+        SemVersion CalculatePrereleaseVersion(GitRev rev, IEnumerable<ReleaseTagInfo> releaseTags, bool verbose)
         {
             SemVersion version;
 
@@ -70,17 +70,17 @@ namespace Verbot
                 Trace.TraceInformation($"{version} ({description})");
             }
 
-            var commitId = GitRepository.GetCommitId(name);
+            var sha1 = GitRepository.GetCommitId(rev);
 
             var mostRecentReleaseTag =
                 releaseTags
-                    .Where(t => t.Id != commitId)
-                    .FirstOrDefault(t => GitRepository.IsAncestor(t.Name, name));
+                    .Where(t => t.Target != sha1)
+                    .FirstOrDefault(t => GitRepository.IsAncestor(t.Name, rev));
 
             if (mostRecentReleaseTag != null)
             {
                 version = mostRecentReleaseTag.Version;
-                TraceStep($"Previous release tag at {mostRecentReleaseTag.Id}");
+                TraceStep($"Previous release tag at {mostRecentReleaseTag.Target}");
             }
             else
             {
@@ -88,7 +88,7 @@ namespace Verbot
                 TraceStep($"No previous release tags");
             }
 
-            var commitsSincePreviousRelease = GitRepository.ListCommits(mostRecentReleaseTag?.Name, name).ToList();
+            var commitsSincePreviousRelease = GitRepository.ListCommits(mostRecentReleaseTag?.Name, rev).ToList();
             string firstMajorChangeId = null;
             string firstMinorChangeId = null;
             foreach (var id in commitsSincePreviousRelease)
@@ -129,12 +129,12 @@ namespace Verbot
             version = version.Change(prerelease: $"{version.Prerelease}.{distance}");
             TraceStep($"Number of commit(s) since previous release");
 
-            var committerDate = GitRepository.GetCommitterDate(name).ToUniversalTime();
+            var committerDate = GitRepository.GetCommitterDate(rev).ToUniversalTime();
             var committerDateIdentifier = committerDate.ToString("yyyyMMddTHHmmss");
             version = version.Change(prerelease: $"{version.Prerelease}.{committerDateIdentifier}");
             TraceStep($"Commit date");
 
-            var shortHash = GitRepository.GetShortCommitId(name, 4);
+            var shortHash = GitRepository.GetShortCommitId(rev, 4);
             version = version.Change(prerelease: $"{version.Prerelease}.{shortHash}");
             TraceStep($"Short commit hash");
 

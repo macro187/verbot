@@ -21,7 +21,7 @@ namespace Verbot
             }
 
             Trace.TraceInformation($"Tagging {version}");
-            GitRepository.CreateTag(new GitCommitName(version));
+            GitRepository.CreateTag(new GitRefNameComponent(version));
         }
 
 
@@ -44,12 +44,12 @@ namespace Verbot
 
             // Tag MAJOR.MINOR.PATCH
             Trace.TraceInformation("Tagging " + version.ToString());
-            GitRepository.CreateTag(new GitCommitName(version.ToString()));
+            GitRepository.CreateTag(new GitRefNameComponent(version.ToString()));
 
             // Set MAJOR.MINOR-latest branch
-            var majorMinorLatestBranch = FormattableString.Invariant($"{version.Major}.{version.Minor}-latest");
+            var majorMinorLatestBranch = new GitRefNameComponent($"{version.Major}.{version.Minor}-latest");
             Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorMinorLatestBranch}"));
-            GitRepository.CreateOrMoveBranch(new GitCommitName(majorMinorLatestBranch));
+            GitRepository.CreateOrMoveBranch(majorMinorLatestBranch);
 
             // Set MAJOR-latest branch
             var minorVersion = version.Change(null, null, 0, "", "");
@@ -58,9 +58,9 @@ namespace Verbot
             var isLatestMajorMinorLatestBranch = minorVersion >= latestMajorMinorLatestBranch.Version;
             if (isLatestMajorMinorLatestBranch)
             {
-                var majorLatestBranch = FormattableString.Invariant($"{version.Major}-latest");
+                var majorLatestBranch = new GitRefNameComponent(FormattableString.Invariant($"{version.Major}-latest"));
                 Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorLatestBranch}"));
-                GitRepository.CreateOrMoveBranch(new GitCommitName(majorLatestBranch));
+                GitRepository.CreateOrMoveBranch(majorLatestBranch);
             }
 
             // Set latest branch
@@ -70,7 +70,7 @@ namespace Verbot
             if (isLatestMajorMinorLatestBranch && isLatestMajorLatestBranch)
             {
                 Trace.TraceInformation(FormattableString.Invariant($"Setting branch latest"));
-                GitRepository.CreateOrMoveBranch(new GitCommitName("latest"));
+                GitRepository.CreateOrMoveBranch(new GitRefNameComponent("latest"));
             }
 
             // Increment to next patch version
@@ -108,8 +108,8 @@ namespace Verbot
                         throw new UserException(FormattableString.Invariant(
                             $"A -master branch tracking {newBranchVersion.Major}.{newBranchVersion.Minor} already exists"));
 
-                    var newBranch = new GitCommitName(FormattableString.Invariant(
-                        $"{newBranchVersion.Major}.{newBranchVersion.Minor}-master"));
+                    var newBranch =
+                        new GitRefNameComponent($"{newBranchVersion.Major}.{newBranchVersion.Minor}-master");
 
                     Trace.TraceInformation("Creating branch " + newBranch);
                     GitRepository.CreateBranch(newBranch);
@@ -122,8 +122,8 @@ namespace Verbot
                         throw new UserException(FormattableString.Invariant(
                             $"A master branch tracking {newBranchVersion.Major}.{newBranchVersion.Minor} already exists"));
 
-                    var newBranch = new GitCommitName(FormattableString.Invariant(
-                        $"{newBranchVersion.Major}.{newBranchVersion.Minor}-master"));
+                    var newBranch =
+                        new GitRefNameComponent($"{newBranchVersion.Major}.{newBranchVersion.Minor}-master");
 
                     Trace.TraceInformation("Creating and switching to branch " + newBranch);
                     GitRepository.CreateBranch(newBranch);
@@ -147,14 +147,14 @@ namespace Verbot
             CheckNoUncommittedChanges();
 
             var verbotBranchesWithRemote = GetVerbotBranchesWithRemote();
-            var verbotTagsWithRemote = GetVerbotTagsWithRemote();
+            var verbotTagsWithRemote = FindReleaseTagsWithRemote();
 
             CheckForRemoteBranchesAtUnknownCommits(verbotBranchesWithRemote);
             CheckForRemoteBranchesNotBehindLocal(verbotBranchesWithRemote);
             CheckForIncorrectRemoteTags(verbotTagsWithRemote);
 
-            var branchesToPush = verbotBranchesWithRemote.Where(b => b.RemoteId != b.LocalId);
-            var tagsToPush = verbotTagsWithRemote.Where(b => b.RemoteId != b.LocalId);
+            var branchesToPush = verbotBranchesWithRemote.Where(b => b.RemoteTarget != b.Target);
+            var tagsToPush = verbotTagsWithRemote.Where(b => b.RemoteTarget != b.Target);
             var refsToPush = branchesToPush.Concat(tagsToPush);
 
             if (!refsToPush.Any())
@@ -163,7 +163,7 @@ namespace Verbot
                 return;
             }
 
-            GitRepository.Push(refsToPush.Select(r => r.Name), dryRun: dryRun, echoOutput: true);
+            GitRepository.Push(refsToPush.Select(r => r.FullName), dryRun: dryRun, echoOutput: true);
         }
 
 
