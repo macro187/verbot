@@ -13,10 +13,12 @@ namespace Verbot
 
         public void CheckLocal()
         {
+            var releaseTags = FindReleaseTags();
             CheckForVersionLocations();
             CheckForConflictingVersions();
             CheckForMissingVersions();
-            CheckForMissingReleaseTags(FindReleaseTags());
+            CheckForMissingReleaseTags(releaseTags);
+            CheckReleaseLineage(releaseTags);
         }
 
 
@@ -234,9 +236,9 @@ namespace Verbot
         }
 
 
-        void CheckForMissingReleaseTags(IEnumerable<ReleaseTagInfo> tags)
+        void CheckForMissingReleaseTags(IEnumerable<ReleaseTagInfo> releaseTags)
         {
-            var allVersions = new HashSet<SemVersion>(tags.Select(tag => tag.Version));
+            var allVersions = new HashSet<SemVersion>(releaseTags.Select(tag => tag.Version));
             var missingVersions = new List<SemVersion>();
 
             var latestVersion = allVersions.Max();
@@ -287,11 +289,86 @@ namespace Verbot
             {
                 foreach (var missingVersion in missingVersions.OrderBy(v => v))
                 {
-                    Trace.TraceWarning($"Missing {missingVersion} release tag");
+                    Trace.TraceError($"Missing release {missingVersion}");
                 }
+
+                throw new UserException("Missing release(s)");
             }
         }
 
+
+        void CheckReleaseLineage(IEnumerable<ReleaseTagInfo> releaseTags)
+        {
+            /*
+            x.y.0 (y>0)
+
+            - Direct path to x.(y-1).*
+            - At least 1 +semver:feature commit
+            - No +semver:breaking commits
+            - No other release tags
+
+            x.y.z (z>0)
+            
+            - Direct path to x.y.(z-1)
+            - No +semver:feature commits
+            - No +semver:breaking commits
+            - No other release tags
+
+            if (all passed)
+            {
+                throw new UserException("Found release tag(s) with invalid lineage");
+            }
+            */
+
+            var passed = CheckMajorReleaseLineage(releaseTags);
+
+            if (!passed)
+            {
+                throw new UserException("Invalid release lineage");
+            }
+        }
+
+        bool CheckMajorReleaseLineage(IEnumerable<ReleaseTagInfo> releaseTags)
+        {
+            var passed = true;
+
+            /*
+            x.0.0
+
+            - Direct path to (x-1).*.*
+            - At least 1 +semver:breaking
+            */
+
+            var majorReleaseTags = releaseTags.Where(t => t.Version.Minor == 0 && t.Version.Patch == 0);
+            var lookup = majorReleaseTags.ToDictionary(t => t.Version);
+            foreach (var tag in majorReleaseTags)
+            {
+                var version = tag.Version;
+                var previousVersion = version.Change(major: version.Major - 1);
+                var previousTag = previousVersion.Major > 0 ? lookup[previousVersion] : null;
+
+                if (version.Major > 1 && !tag.Target.DescendsFrom(previousTag.Target))
+                {
+                    Trace.TraceError($"Release {tag.Name} does not descend from {previousTag.Name}");
+                    passed = false;
+                    continue;
+                }
+
+                var hasBreakingChangeSincePreviousVersion =
+                    tag.Target.ListCommitsFrom(previousTag?.Target)
+                        .Where(c => c.IsBreaking)
+                        .Any();
+
+                if (!hasBreakingChangeSincePreviousVersion)
+                {
+                    Trace.TraceError($"No breaking changes between {previousVersion} and {version}");
+                    passed = false;
+                    continue;
+                }
+            }
+
+            return passed;
+        }
 
     }
 }

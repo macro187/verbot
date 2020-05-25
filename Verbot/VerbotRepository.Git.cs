@@ -28,14 +28,14 @@ namespace Verbot
         {
             if (!CommitInfoCache.ContainsKey(sha1))
             {
-                CommitInfoCache.Add(sha1, new VerbotCommitInfo(GitRepository, sha1));
+                CommitInfoCache.Add(sha1, new VerbotCommitInfo(this, GitRepository, sha1));
             }
 
             return CommitInfoCache[sha1];
         }
 
 
-        IEnumerable<VerbotCommitInfo> GetCommits(IEnumerable<GitSha1> sha1s) =>
+        public IEnumerable<VerbotCommitInfo> GetCommits(IEnumerable<GitSha1> sha1s) =>
             sha1s.Select(s => GetCommit(s));
 
 

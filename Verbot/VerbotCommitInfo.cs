@@ -1,4 +1,4 @@
-using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using MacroGit;
@@ -9,6 +9,7 @@ namespace Verbot
     partial class VerbotCommitInfo
     {
 
+        readonly VerbotRepository VerbotRepository;
         readonly GitRepository GitRepository;
         string message;
         bool? isBreaking;
@@ -19,8 +20,9 @@ namespace Verbot
         /// Assumed to exist in <paramref name="gitRepository"/>
         /// </param>
         ///
-        public VerbotCommitInfo(GitRepository gitRepository, GitSha1 sha1)
+        public VerbotCommitInfo(VerbotRepository verbotRepository, GitRepository gitRepository, GitSha1 sha1)
         {
+            VerbotRepository = verbotRepository;
             GitRepository = gitRepository;
             Sha1 = sha1;
         }
@@ -71,6 +73,14 @@ namespace Verbot
                 return isFeature.Value;
             }
         }
+
+
+        public bool DescendsFrom(VerbotCommitInfo commit) =>
+            GitRepository.IsAncestor(commit.Sha1, Sha1);
+
+
+        public IEnumerable<VerbotCommitInfo> ListCommitsFrom(VerbotCommitInfo commit) =>
+            VerbotRepository.GetCommits(GitRepository.ListCommits(commit?.Sha1, Sha1));
 
     }
 }
