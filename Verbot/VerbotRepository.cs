@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using MacroExceptions;
 using MacroGit;
 using MacroGuards;
@@ -14,9 +15,10 @@ namespace Verbot
 
         readonly GitRepository GitRepository;
         readonly VisualStudioSolution Solution;
+        readonly bool Verbose;
 
 
-        public VerbotRepository(GitRepository gitRepository)
+        public VerbotRepository(GitRepository gitRepository, bool verbose)
         {
             Guard.NotNull(gitRepository, nameof(gitRepository));
 
@@ -28,6 +30,14 @@ namespace Verbot
 
             GitRepository = gitRepository;
             Solution = solution;
+            Verbose = verbose;
+        }
+
+
+        public void TraceVerbose(string message)
+        {
+            if (!Verbose) return;
+            Trace.TraceInformation(message);
         }
 
     }

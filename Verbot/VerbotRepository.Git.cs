@@ -121,7 +121,7 @@ namespace Verbot
             if (@ref.Name == "master")
             {
                 return
-                    CalculateReleaseVersion(GetCommit(@ref.Target), false)
+                    CalculateReleaseVersion(GetCommit(@ref.Target))
                         .Change(null, null, 0, "", "");
             }
 

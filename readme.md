@@ -8,7 +8,10 @@ verbot
 Synopsis
 ========
 
-    verbot <command> [<arguments>]
+    verbot [--verbose] <command> [options]
+
+		--verbose
+			Output informative details as operations are performed.
 
 
 
@@ -18,9 +21,8 @@ Commands
     help
         Display usage information
 
-    calc [--verbose]
-    calc --release [--verbose]
-    calc --prerelease [--verbose]
+    calc --release
+    calc --prerelease
         Calculate and output the current version number
 
         Details on how version numbers are calculated can be found in the
@@ -36,13 +38,9 @@ Commands
             has been tagged as a release, output a pre-release version as if
             it wasn't.
 
-        --verbose
-            Output diagnostic information about how the version number is
-            calculated.
-
-    write [--verbose]
-    write --release [--verbose]
-    write --prerelease [--verbose]
+    write
+    write --release
+    write --prerelease
         Record the current version number in source code files, and then
         output it
 
@@ -61,10 +59,6 @@ Commands
             Always output a pre-release version number.  If the current commit
             has been tagged as a release, output a pre-release version as if
             it wasn't.
-
-        --verbose
-            Output diagnostic information about how the version number is
-            calculated.
 
     reset
         Record a default "9999.0.0-alpha" version number in source code files

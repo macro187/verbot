@@ -2,58 +2,53 @@ using System.Collections.Generic;
 using System.Linq;
 using MacroGit;
 using MacroSemver;
-using System.Diagnostics;
 
 namespace Verbot
 {
     partial class VerbotRepository
     {
 
-        public SemVersion CalculateVersion(bool verbose) =>
-            CalculateVersion(GetHeadCommit(), verbose);
+        public SemVersion CalculateVersion() =>
+            CalculateVersion(GetHeadCommit());
 
 
-        public SemVersion CalculateVersion(VerbotCommitInfo commit, bool verbose) =>
-            CalculateVersion(commit, verbose, FindReleaseTags());
+        public SemVersion CalculateVersion(VerbotCommitInfo commit) =>
+            CalculateVersion(commit, FindReleaseTags());
 
 
-        SemVersion CalculateVersion(VerbotCommitInfo commit, bool verbose, IEnumerable<ReleaseTagInfo> releaseTags) =>
+        SemVersion CalculateVersion(VerbotCommitInfo commit, IEnumerable<ReleaseTagInfo> releaseTags) =>
             releaseTags
                 .Where(tag => tag.Target == commit)
                 .Select(tag => tag.Version)
                 .SingleOrDefault() ??
-            CalculatePrereleaseVersion(commit, releaseTags, verbose);
+            CalculatePrereleaseVersion(commit, releaseTags);
 
 
-        public SemVersion CalculateReleaseVersion(bool verbose) =>
-            CalculateReleaseVersion(GetHeadCommit(), verbose);
+        public SemVersion CalculateReleaseVersion() =>
+            CalculateReleaseVersion(GetHeadCommit());
 
 
-        public SemVersion CalculateReleaseVersion(VerbotCommitInfo commit, bool verbose) =>
-            CalculateVersion(commit, verbose)
+        public SemVersion CalculateReleaseVersion(VerbotCommitInfo commit) =>
+            CalculateVersion(commit)
                 .Change(prerelease: "", build: "");
 
 
-        public SemVersion CalculatePrereleaseVersion(bool verbose) =>
-            CalculatePrereleaseVersion(GetHeadCommit(), verbose);
+        public SemVersion CalculatePrereleaseVersion() =>
+            CalculatePrereleaseVersion(GetHeadCommit());
 
 
-        public SemVersion CalculatePrereleaseVersion(VerbotCommitInfo commit, bool verbose) =>
-            CalculatePrereleaseVersion(commit, FindReleaseTags(), verbose);
+        public SemVersion CalculatePrereleaseVersion(VerbotCommitInfo commit) =>
+            CalculatePrereleaseVersion(commit, FindReleaseTags());
 
 
         SemVersion CalculatePrereleaseVersion(
             VerbotCommitInfo commit,
-            IEnumerable<ReleaseTagInfo> releaseTags,
-            bool verbose)
+            IEnumerable<ReleaseTagInfo> releaseTags)
         {
             SemVersion version;
 
-            void TraceStep(string description)
-            {
-                if (!verbose) return;
-                Trace.TraceInformation($"{version} ({description})");
-            }
+            void TraceStep(string description) =>
+                TraceVerbose($"{version} ({description})");
 
             var mostRecentReleaseTag =
                 releaseTags

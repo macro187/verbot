@@ -12,7 +12,7 @@ namespace Verbot
 
         public void Release()
         {
-            var version = CalculateReleaseVersion(false);
+            var version = CalculateReleaseVersion();
 
             var releaseTags = FindReleaseTags();
             if (releaseTags.Any(tag => tag.Version == version))

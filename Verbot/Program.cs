@@ -8,11 +8,15 @@ using MacroIO;
 using MacroConsole;
 using MacroGit;
 using MacroSemver;
+using System.Linq;
 
 namespace Verbot
 {
     class Program
     {
+
+        static bool Verbose;
+
 
         static int Main(string[] args)
         {
@@ -38,9 +42,21 @@ namespace Verbot
 
         static int Main2(Queue<string> args)
         {
+            while(args.Any() && args.Peek().StartsWith("--"))
+            {
+                var option = args.Dequeue();
+                switch (option)
+                {
+                    case "--verbose":
+                        Verbose = true;
+                        break;
+                    default:
+                        throw new UserException($"Unrecognised option '{option}'");
+                }
+            }
+
             if (args.Count == 0) throw new UserException("Expected <command>");
             var command = args.Dequeue();
-
             switch (command.ToLowerInvariant())
             {
                 case "help":
@@ -98,7 +114,6 @@ namespace Verbot
         {
             var repository = GetCurrentRepository();
 
-            var verbose = false;
             var release = false;
             var prerelease = false;
             while (args.Count > 0)
@@ -112,9 +127,6 @@ namespace Verbot
                     case "--prerelease":
                         prerelease = true;
                         break;
-                    case "--verbose":
-                        verbose = true;
-                        break;
                     default:
                         throw new UserException("Unrecognised argument: " + arg);
                 }
@@ -127,10 +139,10 @@ namespace Verbot
 
             var version =
                 release
-                    ? repository.CalculateReleaseVersion(verbose)
+                    ? repository.CalculateReleaseVersion()
                 : prerelease
-                    ? repository.CalculatePrereleaseVersion(verbose)
-                    : repository.CalculateVersion(verbose);
+                    ? repository.CalculatePrereleaseVersion()
+                    : repository.CalculateVersion();
 
             Console.Out.WriteLine(version.ToString());
             return 0;
@@ -141,7 +153,6 @@ namespace Verbot
         {
             var repository = GetCurrentRepository();
 
-            var verbose = false;
             var release = false;
             var prerelease = false;
             while (args.Count > 0)
@@ -155,9 +166,6 @@ namespace Verbot
                     case "--prerelease":
                         prerelease = true;
                         break;
-                    case "--verbose":
-                        verbose = true;
-                        break;
                     default:
                         throw new UserException("Unrecognised argument: " + arg);
                 }
@@ -170,10 +178,10 @@ namespace Verbot
 
             var version =
                 release
-                    ? repository.WriteReleaseVersion(verbose)
+                    ? repository.WriteReleaseVersion()
                 : prerelease
-                    ? repository.WritePrereleaseVersion(verbose)
-                    : repository.WriteVersion(verbose);
+                    ? repository.WritePrereleaseVersion()
+                    : repository.WriteVersion();
 
             Console.Out.WriteLine(version.ToString());
             return 0;
@@ -302,7 +310,7 @@ namespace Verbot
         {
             var repo = GitRepository.FindContainingRepository(Environment.CurrentDirectory);
             if (repo == null) throw new UserException("Not in a Git repository");
-            return new VerbotRepository(repo);
+            return new VerbotRepository(repo, Verbose);
         }
 
     }

@@ -11,25 +11,25 @@ namespace Verbot
     partial class VerbotRepository
     {
 
-        public SemVersion WriteVersion(bool verbose)
+        public SemVersion WriteVersion()
         {
-            var version = CalculateVersion(verbose);
+            var version = CalculateVersion();
             WriteToVersionLocations(version);
             return version;
         }
 
 
-        public SemVersion WriteReleaseVersion(bool verbose)
+        public SemVersion WriteReleaseVersion()
         {
-            var version = CalculateReleaseVersion(verbose);
+            var version = CalculateReleaseVersion();
             WriteToVersionLocations(version);
             return version;
         }
 
 
-        public SemVersion WritePrereleaseVersion(bool verbose)
+        public SemVersion WritePrereleaseVersion()
         {
-            var version = CalculatePrereleaseVersion(verbose);
+            var version = CalculatePrereleaseVersion();
             WriteToVersionLocations(version);
             return version;
         }
