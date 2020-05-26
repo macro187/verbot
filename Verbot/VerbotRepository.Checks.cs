@@ -299,23 +299,10 @@ namespace Verbot
 
         void CheckReleaseLineage(IEnumerable<ReleaseTagInfo> releaseTags)
         {
-            /*
-            x.y.z (z>0)
-            
-            - Direct path to x.y.(z-1)
-            - No +semver:feature commits
-            - No +semver:breaking commits
-            - No other release tags
-
-            if (all passed)
-            {
-                throw new UserException("Found release tag(s) with invalid lineage");
-            }
-            */
-
             var passed =
                 CheckMajorReleaseLineage(releaseTags) &
-                CheckMinorReleaseLineage(releaseTags);
+                CheckMinorReleaseLineage(releaseTags) &
+                CheckPatchReleaseLineage(releaseTags);
 
             if (!passed)
             {
@@ -342,14 +329,12 @@ namespace Verbot
                     continue;
                 }
 
-                var breakingChange =
-                    tag.Target.ListCommitsFrom(previousTag?.Target)
-                        .Where(c => c.IsBreaking)
-                        .FirstOrDefault();
+                var commitsSincePrevious = tag.Target.ListCommitsFrom(previousTag?.Target).ToList();
 
-                if (breakingChange != null)
+                var breakingChange = commitsSincePrevious.FirstOrDefault(c => c.IsBreaking);
+                if (breakingChange == null)
                 {
-                    Trace.TraceWarning($"No breaking changes between {previousVersion} and {version}");
+                    Trace.TraceWarning($"No breaking change(s) between {previousVersion} and {version}");
                     continue;
                 }
             }
@@ -378,11 +363,9 @@ namespace Verbot
                     continue;
                 }
 
-                var breakingChange =
-                    tag.Target.ListCommitsFrom(previousTag.Target)
-                        .Where(c => c.IsBreaking)
-                        .FirstOrDefault();
+                var commitsSincePrevious = tag.Target.ListCommitsFrom(previousTag.Target).ToList();
 
+                var breakingChange = commitsSincePrevious.FirstOrDefault(c => c.IsBreaking);
                 if (breakingChange != null)
                 {
                     Trace.TraceWarning($"Breaking change(s) between {previousVersion} and {version}");
@@ -390,14 +373,52 @@ namespace Verbot
                     Trace.TraceWarning(breakingChange.Message);
                 }
 
-                var featureChange =
-                    tag.Target.ListCommitsFrom(previousTag.Target)
-                        .Where(c => c.IsFeature)
-                        .FirstOrDefault();
-
+                var featureChange = commitsSincePrevious.FirstOrDefault(c => c.IsFeature);
                 if (featureChange == null)
                 {
-                    Trace.TraceWarning($"No feature changes between {previousVersion} and {version}");
+                    Trace.TraceWarning($"No feature change(s) between {previousVersion} and {version}");
+                }
+            }
+
+            return passed;
+        }
+
+        bool CheckPatchReleaseLineage(IEnumerable<ReleaseTagInfo> releaseTags)
+        {
+            var passed = true;
+
+            var lookup = releaseTags.ToDictionary(t => t.Version);
+            foreach (var tag in releaseTags)
+            {
+                var version = tag.Version;
+                if (version.Patch == 0) continue;
+
+                var previousVersion = version.Change(patch: version.Patch - 1);
+                var previousTag = lookup[previousVersion];
+
+                if (!tag.Target.DescendsFrom(previousTag.Target))
+                {
+                    Trace.TraceError($"Release {tag.Name} does not descend from {previousTag.Name}");
+                    passed = false;
+                    continue;
+                }
+
+                var commitsSincePrevious = tag.Target.ListCommitsFrom(previousTag.Target).ToList();
+
+                var breakingChange = commitsSincePrevious.FirstOrDefault(c => c.IsBreaking);
+                if (breakingChange != null)
+                {
+                    Trace.TraceWarning($"Breaking change(s) between {previousVersion} and {version}");
+                    Trace.TraceWarning(breakingChange.Sha1);
+                    Trace.TraceWarning(breakingChange.Message);
+                }
+
+                var featureChange = commitsSincePrevious.FirstOrDefault(c => c.IsFeature);
+                if (featureChange != null)
+                {
+                    Trace.TraceWarning($"Feature change(s) between {previousVersion} and {version}");
+                    Trace.TraceWarning(featureChange.Sha1);
+                    Trace.TraceWarning(featureChange.Message);
                 }
             }
 
