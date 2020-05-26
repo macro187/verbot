@@ -300,13 +300,6 @@ namespace Verbot
         void CheckReleaseLineage(IEnumerable<ReleaseTagInfo> releaseTags)
         {
             /*
-            x.y.0 (y>0)
-
-            - Direct path to x.(y-1).*
-            - At least 1 +semver:feature commit
-            - No +semver:breaking commits
-            - No other release tags
-
             x.y.z (z>0)
             
             - Direct path to x.y.(z-1)
@@ -320,7 +313,9 @@ namespace Verbot
             }
             */
 
-            var passed = CheckMajorReleaseLineage(releaseTags);
+            var passed =
+                CheckMajorReleaseLineage(releaseTags) &
+                CheckMinorReleaseLineage(releaseTags);
 
             if (!passed)
             {
@@ -331,13 +326,6 @@ namespace Verbot
         bool CheckMajorReleaseLineage(IEnumerable<ReleaseTagInfo> releaseTags)
         {
             var passed = true;
-
-            /*
-            x.0.0
-
-            - Direct path to (x-1).*.*
-            - At least 1 +semver:breaking
-            */
 
             var majorReleaseTags = releaseTags.Where(t => t.Version.Minor == 0 && t.Version.Patch == 0);
             var lookup = majorReleaseTags.ToDictionary(t => t.Version);
@@ -354,15 +342,62 @@ namespace Verbot
                     continue;
                 }
 
-                var hasBreakingChangeSincePreviousVersion =
+                var breakingChange =
                     tag.Target.ListCommitsFrom(previousTag?.Target)
                         .Where(c => c.IsBreaking)
-                        .Any();
+                        .FirstOrDefault();
 
-                if (!hasBreakingChangeSincePreviousVersion)
+                if (breakingChange != null)
                 {
                     Trace.TraceWarning($"No breaking changes between {previousVersion} and {version}");
                     continue;
+                }
+            }
+
+            return passed;
+        }
+
+        bool CheckMinorReleaseLineage(IEnumerable<ReleaseTagInfo> releaseTags)
+        {
+            var passed = true;
+
+            var minorReleaseTags = releaseTags.Where(t => t.Version.Patch == 0);
+            var lookup = minorReleaseTags.ToDictionary(t => t.Version);
+            foreach (var tag in minorReleaseTags)
+            {
+                var version = tag.Version;
+                if (version.Minor == 0) continue;
+
+                var previousVersion = version.Change(minor: version.Minor - 1);
+                var previousTag = lookup[previousVersion];
+
+                if (!tag.Target.DescendsFrom(previousTag.Target))
+                {
+                    Trace.TraceError($"Release {tag.Name} does not descend from {previousTag.Name}");
+                    passed = false;
+                    continue;
+                }
+
+                var breakingChange =
+                    tag.Target.ListCommitsFrom(previousTag.Target)
+                        .Where(c => c.IsBreaking)
+                        .FirstOrDefault();
+
+                if (breakingChange != null)
+                {
+                    Trace.TraceWarning($"Breaking change(s) between {previousVersion} and {version}");
+                    Trace.TraceWarning(breakingChange.Sha1);
+                    Trace.TraceWarning(breakingChange.Message);
+                }
+
+                var featureChange =
+                    tag.Target.ListCommitsFrom(previousTag.Target)
+                        .Where(c => c.IsFeature)
+                        .FirstOrDefault();
+
+                if (featureChange == null)
+                {
+                    Trace.TraceWarning($"No feature changes between {previousVersion} and {version}");
                 }
             }
 
