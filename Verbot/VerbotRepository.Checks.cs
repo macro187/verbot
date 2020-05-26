@@ -361,8 +361,7 @@ namespace Verbot
 
                 if (!hasBreakingChangeSincePreviousVersion)
                 {
-                    Trace.TraceError($"No breaking changes between {previousVersion} and {version}");
-                    passed = false;
+                    Trace.TraceWarning($"No breaking changes between {previousVersion} and {version}");
                     continue;
                 }
             }
