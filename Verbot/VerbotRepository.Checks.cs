@@ -238,6 +238,8 @@ namespace Verbot
 
         void CheckForMissingReleaseTags(IEnumerable<ReleaseTagInfo> releaseTags)
         {
+            if (!releaseTags.Any()) return;
+
             var allVersions = new HashSet<SemVersion>(releaseTags.Select(tag => tag.Version));
             var missingVersions = new List<SemVersion>();
 
@@ -299,6 +301,8 @@ namespace Verbot
 
         void CheckReleaseLineage(IEnumerable<ReleaseTagInfo> releaseTags)
         {
+            if (!releaseTags.Any()) return;
+
             var passed =
                 CheckMajorReleaseLineage(releaseTags) &
                 CheckMinorReleaseLineage(releaseTags) &
@@ -314,22 +318,40 @@ namespace Verbot
         {
             var passed = true;
 
-            var majorReleaseTags = releaseTags.Where(t => t.Version.Minor == 0 && t.Version.Patch == 0);
-            var lookup = majorReleaseTags.ToDictionary(t => t.Version);
-            foreach (var tag in majorReleaseTags)
+            var versionLookup = releaseTags.ToDictionary(t => t.Version);
+            ReleaseTagInfo GetTag(SemVersion version) => versionLookup[version];
+
+            var targetLookup = releaseTags.ToDictionary(t => t.Target);
+            ReleaseTagInfo FindTag(VerbotCommitInfo commit) =>
+                targetLookup.TryGetValue(commit, out var tag) ? tag : null;
+
+            var majorTags = releaseTags.Where(t => t.Version.Minor == 0 && t.Version.Patch == 0);
+            foreach (var tag in majorTags)
             {
                 var version = tag.Version;
-                var previousVersion = version.Change(major: version.Major - 1);
-                var previousTag = previousVersion.Major > 0 ? lookup[previousVersion] : null;
+                var previousMajorVersion = version.Change(major: version.Major - 1);
+                var previousMajorTag = previousMajorVersion.Major > 0 ? GetTag(previousMajorVersion) : null;
 
-                if (version.Major > 1 && !tag.Target.DescendsFrom(previousTag.Target))
+                if (version.Major > 1 && !tag.Target.DescendsFrom(previousMajorTag.Target))
                 {
-                    Trace.TraceError($"Release {tag.Name} does not descend from {previousTag.Name}");
+                    Trace.TraceError($"Release {version} does not descend from {previousMajorVersion}");
                     passed = false;
                     continue;
                 }
 
-                var commitsSincePrevious = tag.Target.ListCommitsFrom(previousTag?.Target).ToList();
+                var commitsSincePreviousMajor = tag.Target.ListCommitsFrom(previousMajorTag?.Target).ToList();
+                var previousTag =
+                    commitsSincePreviousMajor
+                        .Take(commitsSincePreviousMajor.Count - 1)
+                        .Select(c => FindTag(c))
+                        .Where(t => t != null)
+                        .LastOrDefault();
+                var commitsSincePrevious =
+                    previousTag != null
+                        ? tag.Target.ListCommitsFrom(previousTag.Target).ToList()
+                        : commitsSincePreviousMajor;
+                previousTag = previousTag ?? previousMajorTag;
+                var previousVersion = previousTag?.Version ?? new SemVersion(0, 0, 0);
 
                 var breakingChange = commitsSincePrevious.FirstOrDefault(c => c.IsBreaking);
                 if (breakingChange == null)
@@ -346,24 +368,42 @@ namespace Verbot
         {
             var passed = true;
 
+            var versionLookup = releaseTags.ToDictionary(t => t.Version);
+            ReleaseTagInfo GetTag(SemVersion version) => versionLookup[version];
+
+            var targetLookup = releaseTags.ToDictionary(t => t.Target);
+            ReleaseTagInfo FindTag(VerbotCommitInfo commit) =>
+                targetLookup.TryGetValue(commit, out var tag) ? tag : null;
+
             var minorReleaseTags = releaseTags.Where(t => t.Version.Patch == 0);
-            var lookup = minorReleaseTags.ToDictionary(t => t.Version);
             foreach (var tag in minorReleaseTags)
             {
                 var version = tag.Version;
                 if (version.Minor == 0) continue;
 
-                var previousVersion = version.Change(minor: version.Minor - 1);
-                var previousTag = lookup[previousVersion];
+                var previousMinorVersion = version.Change(minor: version.Minor - 1);
+                var previousMinorTag = GetTag(previousMinorVersion);
 
-                if (!tag.Target.DescendsFrom(previousTag.Target))
+                if (!tag.Target.DescendsFrom(previousMinorTag.Target))
                 {
-                    Trace.TraceError($"Release {tag.Name} does not descend from {previousTag.Name}");
+                    Trace.TraceError($"Release {version} does not descend from {previousMinorVersion}");
                     passed = false;
                     continue;
                 }
 
-                var commitsSincePrevious = tag.Target.ListCommitsFrom(previousTag.Target).ToList();
+                var commitsSincePreviousMinor = tag.Target.ListCommitsFrom(previousMinorTag.Target).ToList();
+                var previousTag =
+                    commitsSincePreviousMinor
+                        .Take(commitsSincePreviousMinor.Count - 1)
+                        .Select(c => FindTag(c))
+                        .Where(t => t != null)
+                        .LastOrDefault();
+                var commitsSincePrevious =
+                    previousTag != null
+                        ? tag.Target.ListCommitsFrom(previousTag.Target).ToList()
+                        : commitsSincePreviousMinor;
+                previousTag = previousTag ?? previousMinorTag;
+                var previousVersion = previousTag.Version;
 
                 var breakingChange = commitsSincePrevious.FirstOrDefault(c => c.IsBreaking);
                 if (breakingChange != null)
@@ -387,36 +427,38 @@ namespace Verbot
         {
             var passed = true;
 
-            var lookup = releaseTags.ToDictionary(t => t.Version);
+            var versionLookup = releaseTags.ToDictionary(t => t.Version);
+            ReleaseTagInfo GetTag(SemVersion version) => versionLookup[version];
+
             foreach (var tag in releaseTags)
             {
                 var version = tag.Version;
                 if (version.Patch == 0) continue;
 
-                var previousVersion = version.Change(patch: version.Patch - 1);
-                var previousTag = lookup[previousVersion];
+                var previousPatchVersion = version.Change(patch: version.Patch - 1);
+                var previousPatchTag = GetTag(previousPatchVersion);
 
-                if (!tag.Target.DescendsFrom(previousTag.Target))
+                if (!tag.Target.DescendsFrom(previousPatchTag.Target))
                 {
-                    Trace.TraceError($"Release {tag.Name} does not descend from {previousTag.Name}");
+                    Trace.TraceError($"Release {version} does not descend from {previousPatchVersion}");
                     passed = false;
                     continue;
                 }
 
-                var commitsSincePrevious = tag.Target.ListCommitsFrom(previousTag.Target).ToList();
+                var commitsSincePreviousPatch = tag.Target.ListCommitsFrom(previousPatchTag.Target).ToList();
 
-                var breakingChange = commitsSincePrevious.FirstOrDefault(c => c.IsBreaking);
+                var breakingChange = commitsSincePreviousPatch.FirstOrDefault(c => c.IsBreaking);
                 if (breakingChange != null)
                 {
-                    Trace.TraceWarning($"Breaking change(s) between {previousVersion} and {version}");
+                    Trace.TraceWarning($"Breaking change(s) between {previousPatchVersion} and {version}");
                     Trace.TraceWarning(breakingChange.Sha1);
                     Trace.TraceWarning(breakingChange.Message);
                 }
 
-                var featureChange = commitsSincePrevious.FirstOrDefault(c => c.IsFeature);
+                var featureChange = commitsSincePreviousPatch.FirstOrDefault(c => c.IsFeature);
                 if (featureChange != null)
                 {
-                    Trace.TraceWarning($"Feature change(s) between {previousVersion} and {version}");
+                    Trace.TraceWarning($"Feature change(s) between {previousPatchVersion} and {version}");
                     Trace.TraceWarning(featureChange.Sha1);
                     Trace.TraceWarning(featureChange.Message);
                 }
