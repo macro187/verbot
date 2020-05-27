@@ -14,8 +14,7 @@ namespace Verbot
         {
             var version = CalculateReleaseVersion();
 
-            var releaseTags = FindReleaseTags();
-            if (releaseTags.Any(tag => tag.Version == version))
+            if (ReleaseTags.Any(tag => tag.Version == version))
             {
                 throw new UserException($"Version {version} has already been released");
             }
@@ -91,7 +90,6 @@ namespace Verbot
             var currentMinorVersion = currentVersion.Change(null, null, 0, "", "");
             var currentBranch = GitRepository.GetBranch();
             var onMaster = (currentBranch == "master");
-            var masterBranches = FindMasterBranches();
             var nextVersion = CalculateNextVersion(major, minor);
             var nextMinorVersion = nextVersion.Change(null, null, 0, "", "");
             CheckNotAdvancingToLatestVersionOnNonMasterBranch(nextVersion);
@@ -104,7 +102,7 @@ namespace Verbot
                 {
                     var newBranchVersion = currentMinorVersion;
 
-                    if (masterBranches.Any(mb => mb.Name != "master" && mb.Version == newBranchVersion))
+                    if (MasterBranches.Any(mb => mb.Name != "master" && mb.Version == newBranchVersion))
                         throw new UserException(FormattableString.Invariant(
                             $"A -master branch tracking {newBranchVersion.Major}.{newBranchVersion.Minor} already exists"));
 
@@ -118,7 +116,7 @@ namespace Verbot
                 {
                     var newBranchVersion = nextMinorVersion;
 
-                    if (masterBranches.Any(mb => mb.Version == newBranchVersion))
+                    if (MasterBranches.Any(mb => mb.Version == newBranchVersion))
                         throw new UserException(FormattableString.Invariant(
                             $"A master branch tracking {newBranchVersion.Major}.{newBranchVersion.Minor} already exists"));
 
@@ -149,9 +147,9 @@ namespace Verbot
             var verbotBranchesWithRemote = GetVerbotBranchesWithRemote();
             var verbotTagsWithRemote = FindReleaseTagsWithRemote();
 
-            CheckForRemoteBranchesAtUnknownCommits(verbotBranchesWithRemote);
-            CheckForRemoteBranchesNotBehindLocal(verbotBranchesWithRemote);
-            CheckForIncorrectRemoteTags(verbotTagsWithRemote);
+            CheckForRemoteBranchesAtUnknownCommits();
+            CheckForRemoteBranchesNotBehindLocal();
+            CheckForIncorrectRemoteTags();
 
             var branchesToPush = verbotBranchesWithRemote.Where(b => b.RemoteTarget != b.Target);
             var tagsToPush = verbotTagsWithRemote.Where(b => b.RemoteTarget != b.Target);

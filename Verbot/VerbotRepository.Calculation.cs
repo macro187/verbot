@@ -12,20 +12,20 @@ namespace Verbot
             CalculateVersion(GetHeadCommit());
 
 
+        public SemVersion CalculateReleaseVersion() =>
+            CalculateReleaseVersion(GetHeadCommit());
+
+
+        public SemVersion CalculatePrereleaseVersion() =>
+            CalculatePrereleaseVersion(GetHeadCommit());
+
+
         public SemVersion CalculateVersion(VerbotCommitInfo commit) =>
-            CalculateVersion(commit, FindReleaseTags());
-
-
-        SemVersion CalculateVersion(VerbotCommitInfo commit, IEnumerable<ReleaseTagInfo> releaseTags) =>
-            releaseTags
+            ReleaseTags
                 .Where(tag => tag.Target == commit)
                 .Select(tag => tag.Version)
                 .SingleOrDefault() ??
-            CalculatePrereleaseVersion(commit, releaseTags);
-
-
-        public SemVersion CalculateReleaseVersion() =>
-            CalculateReleaseVersion(GetHeadCommit());
+            CalculatePrereleaseVersion(commit);
 
 
         public SemVersion CalculateReleaseVersion(VerbotCommitInfo commit) =>
@@ -33,17 +33,7 @@ namespace Verbot
                 .Change(prerelease: "", build: "");
 
 
-        public SemVersion CalculatePrereleaseVersion() =>
-            CalculatePrereleaseVersion(GetHeadCommit());
-
-
-        public SemVersion CalculatePrereleaseVersion(VerbotCommitInfo commit) =>
-            CalculatePrereleaseVersion(commit, FindReleaseTags());
-
-
-        SemVersion CalculatePrereleaseVersion(
-            VerbotCommitInfo commit,
-            IEnumerable<ReleaseTagInfo> releaseTags)
+        SemVersion CalculatePrereleaseVersion(VerbotCommitInfo commit)
         {
             SemVersion version;
 
@@ -51,7 +41,7 @@ namespace Verbot
                 TraceVerbose($"{version} ({description})");
 
             var mostRecentReleaseTag =
-                releaseTags
+                ReleaseTags
                     .Where(t => t.Target != commit)
                     .FirstOrDefault(t => GitRepository.IsAncestor(t.Target.Sha1, commit.Sha1));
 

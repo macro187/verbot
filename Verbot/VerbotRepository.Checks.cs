@@ -13,23 +13,19 @@ namespace Verbot
 
         public void CheckLocal()
         {
-            var releaseTags = FindReleaseTags();
             CheckForVersionLocations();
             CheckForConflictingVersions();
             CheckForMissingVersions();
-            CheckForMissingReleaseTags(releaseTags);
-            CheckReleaseLineage(releaseTags);
+            CheckForMissingReleaseTags();
+            CheckReleaseLineage();
         }
 
 
         public void CheckRemote()
         {
-            var verbotBranchesWithRemote = GetVerbotBranchesWithRemote();
-            var verbotTagsWithRemote = FindReleaseTagsWithRemote();
-
-            CheckForRemoteBranchesAtUnknownCommits(verbotBranchesWithRemote);
-            CheckForRemoteBranchesNotBehindLocal(verbotBranchesWithRemote);
-            CheckForIncorrectRemoteTags(verbotTagsWithRemote);
+            CheckForRemoteBranchesAtUnknownCommits();
+            CheckForRemoteBranchesNotBehindLocal();
+            CheckForIncorrectRemoteTags();
         }
 
 
@@ -128,8 +124,7 @@ namespace Verbot
 
         void CheckMasterBranchIsTrackingHighestVersion()
         {
-            var masterBranches = FindMasterBranches();
-            if (masterBranches.Any(mb => mb.Name == "master") && masterBranches.First().Name != "master")
+            if (MasterBranches.Any(mb => mb.Name == "master") && MasterBranches.First().Name != "master")
                 throw new UserException("Expected master branch to be tracking the latest version");
         }
 
@@ -138,7 +133,7 @@ namespace Verbot
         {
             var minorVersion = ReadFromVersionLocations().Change(null, null, 0, "", "");
             var expectedCurrentBranch =
-                FindMasterBranches()
+                MasterBranches
                     .Where(mb => mb.Version == minorVersion)
                     .Select(mb => mb.Name)
                     .SingleOrDefault();
@@ -170,16 +165,17 @@ namespace Verbot
 
         void CheckNotAdvancingToLatestVersionOnNonMasterBranch(SemVersion newVersion)
         {
-            var masterBranches = FindMasterBranches();
-            if (masterBranches.Count == 0) return;
+            if (!MasterBranches.Any()) return;
             var newMinorVersion = newVersion.Change(null, null, 0, "", "");
-            if (newMinorVersion > masterBranches.First().Version && GitRepository.GetBranch() != "master")
+            if (newMinorVersion > MasterBranches.First().Version && GitRepository.GetBranch() != "master")
                 throw new UserException("Must be on master branch to advance to latest version");
         }
 
 
-        void CheckForIncorrectRemoteTags(IEnumerable<GitRefWithRemote> verbotTagsWithRemote)
+        void CheckForIncorrectRemoteTags()
         {
+            var verbotTagsWithRemote = FindReleaseTagsWithRemote();
+
             var incorrectRemoteTags =
                 verbotTagsWithRemote
                     .Where(t => t.RemoteTarget != null)
@@ -197,8 +193,10 @@ namespace Verbot
         }
 
 
-        void CheckForRemoteBranchesAtUnknownCommits(IEnumerable<GitRefWithRemote> verbotBranchesWithRemote)
+        void CheckForRemoteBranchesAtUnknownCommits()
         {
+            var verbotBranchesWithRemote = GetVerbotBranchesWithRemote();
+
             var remoteBranchesAtUnknownCommits =
                 verbotBranchesWithRemote
                     .Where(b => b.RemoteTarget != null)
@@ -216,8 +214,10 @@ namespace Verbot
         }
 
 
-        void CheckForRemoteBranchesNotBehindLocal(IEnumerable<GitRefWithRemote> verbotBranchesWithRemote)
+        void CheckForRemoteBranchesNotBehindLocal()
         {
+            var verbotBranchesWithRemote = GetVerbotBranchesWithRemote();
+
             var remoteBranchesNotBehindLocal =
                 verbotBranchesWithRemote
                     .Where(b => b.RemoteTarget != null)
@@ -236,11 +236,11 @@ namespace Verbot
         }
 
 
-        void CheckForMissingReleaseTags(IEnumerable<ReleaseTagInfo> releaseTags)
+        void CheckForMissingReleaseTags()
         {
-            if (!releaseTags.Any()) return;
+            if (!ReleaseTags.Any()) return;
 
-            var allVersions = new HashSet<SemVersion>(releaseTags.Select(tag => tag.Version));
+            var allVersions = new HashSet<SemVersion>(ReleaseTags.Select(tag => tag.Version));
             var missingVersions = new List<SemVersion>();
 
             var latestVersion = allVersions.Max();
@@ -299,14 +299,12 @@ namespace Verbot
         }
 
 
-        void CheckReleaseLineage(IEnumerable<ReleaseTagInfo> releaseTags)
+        void CheckReleaseLineage()
         {
-            if (!releaseTags.Any()) return;
-
             var passed =
-                CheckMajorReleaseLineage(releaseTags) &
-                CheckMinorReleaseLineage(releaseTags) &
-                CheckPatchReleaseLineage(releaseTags);
+                CheckMajorReleaseLineage() &
+                CheckMinorReleaseLineage() &
+                CheckPatchReleaseLineage();
 
             if (!passed)
             {
@@ -314,18 +312,20 @@ namespace Verbot
             }
         }
 
-        bool CheckMajorReleaseLineage(IEnumerable<ReleaseTagInfo> releaseTags)
+        bool CheckMajorReleaseLineage()
         {
+            if (!ReleaseTags.Any()) return true;
+
             var passed = true;
 
-            var versionLookup = releaseTags.ToDictionary(t => t.Version);
+            var versionLookup = ReleaseTags.ToDictionary(t => t.Version);
             ReleaseTagInfo GetTag(SemVersion version) => versionLookup[version];
 
-            var targetLookup = releaseTags.ToDictionary(t => t.Target);
+            var targetLookup = ReleaseTags.ToDictionary(t => t.Target);
             ReleaseTagInfo FindTag(VerbotCommitInfo commit) =>
                 targetLookup.TryGetValue(commit, out var tag) ? tag : null;
 
-            var majorTags = releaseTags.Where(t => t.Version.Minor == 0 && t.Version.Patch == 0);
+            var majorTags = ReleaseTags.Where(t => t.Version.Minor == 0 && t.Version.Patch == 0);
             foreach (var tag in majorTags)
             {
                 var version = tag.Version;
@@ -364,18 +364,20 @@ namespace Verbot
             return passed;
         }
 
-        bool CheckMinorReleaseLineage(IEnumerable<ReleaseTagInfo> releaseTags)
+        bool CheckMinorReleaseLineage()
         {
+            if (!ReleaseTags.Any()) return true;
+
             var passed = true;
 
-            var versionLookup = releaseTags.ToDictionary(t => t.Version);
+            var versionLookup = ReleaseTags.ToDictionary(t => t.Version);
             ReleaseTagInfo GetTag(SemVersion version) => versionLookup[version];
 
-            var targetLookup = releaseTags.ToDictionary(t => t.Target);
+            var targetLookup = ReleaseTags.ToDictionary(t => t.Target);
             ReleaseTagInfo FindTag(VerbotCommitInfo commit) =>
                 targetLookup.TryGetValue(commit, out var tag) ? tag : null;
 
-            var minorReleaseTags = releaseTags.Where(t => t.Version.Patch == 0);
+            var minorReleaseTags = ReleaseTags.Where(t => t.Version.Patch == 0);
             foreach (var tag in minorReleaseTags)
             {
                 var version = tag.Version;
@@ -423,14 +425,16 @@ namespace Verbot
             return passed;
         }
 
-        bool CheckPatchReleaseLineage(IEnumerable<ReleaseTagInfo> releaseTags)
+        bool CheckPatchReleaseLineage()
         {
+            if (!ReleaseTags.Any()) return true;
+
             var passed = true;
 
-            var versionLookup = releaseTags.ToDictionary(t => t.Version);
+            var versionLookup = ReleaseTags.ToDictionary(t => t.Version);
             ReleaseTagInfo GetTag(SemVersion version) => versionLookup[version];
 
-            foreach (var tag in releaseTags)
+            foreach (var tag in ReleaseTags)
             {
                 var version = tag.Version;
                 if (version.Patch == 0) continue;

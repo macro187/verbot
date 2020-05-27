@@ -80,7 +80,7 @@ namespace Verbot
 
 
         public IEnumerable<VerbotCommitInfo> ListCommitsFrom(VerbotCommitInfo commit) =>
-            VerbotRepository.GetCommits(GitRepository.ListCommits(commit?.Sha1, Sha1));
+            VerbotRepository.GetCommitsBetween(commit?.Sha1, Sha1);
 
     }
 }
