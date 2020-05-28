@@ -16,6 +16,7 @@ namespace Verbot
             CheckForVersionLocations();
             CheckForConflictingVersions();
             CheckForMissingVersions();
+            CheckForMultipleReleasesFromSingleCommit();
             CheckForMissingReleaseTags();
             CheckReleaseLineage();
         }
@@ -236,6 +237,26 @@ namespace Verbot
         }
 
 
+        void CheckForMultipleReleasesFromSingleCommit()
+        {
+            var passed = true;
+
+            foreach (var tags in CommitReleaseTagLookup)
+            {
+                if (tags.Count() <= 1) continue;
+                var sha1 = tags.Key.Sha1;
+                var tagNames = string.Join(", ", tags.Select(t => t.Name));
+                Trace.TraceError($"Multiple releases on commit {sha1}: {tagNames}");
+                passed = false;
+            }
+
+            if (!passed)
+            {
+                throw new UserException("Commit(s) with multiple releases");
+            }
+        }
+
+
         void CheckForMissingReleaseTags()
         {
             if (!ReleaseTags.Any()) return;
@@ -316,21 +337,13 @@ namespace Verbot
         {
             if (!ReleaseTags.Any()) return true;
 
-            var passed = true;
-
-            var versionLookup = ReleaseTags.ToDictionary(t => t.Version);
-            ReleaseTagInfo GetTag(SemVersion version) => versionLookup[version];
-
-            var targetLookup = ReleaseTags.ToDictionary(t => t.Target);
-            ReleaseTagInfo FindTag(VerbotCommitInfo commit) =>
-                targetLookup.TryGetValue(commit, out var tag) ? tag : null;
-
             var majorTags = ReleaseTags.Where(t => t.Version.Minor == 0 && t.Version.Patch == 0);
+            var passed = true;
             foreach (var tag in majorTags)
             {
                 var version = tag.Version;
                 var previousMajorVersion = version.Change(major: version.Major - 1);
-                var previousMajorTag = previousMajorVersion.Major > 0 ? GetTag(previousMajorVersion) : null;
+                var previousMajorTag = previousMajorVersion.Major > 0 ? GetReleaseTag(previousMajorVersion) : null;
 
                 if (version.Major > 1 && !tag.Target.DescendsFrom(previousMajorTag.Target))
                 {
@@ -343,7 +356,7 @@ namespace Verbot
                 var previousTag =
                     commitsSincePreviousMajor
                         .Take(commitsSincePreviousMajor.Count - 1)
-                        .Select(c => FindTag(c))
+                        .Select(c => FindReleaseTags(c).SingleOrDefault())
                         .Where(t => t != null)
                         .LastOrDefault();
                 var commitsSincePrevious =
@@ -368,23 +381,15 @@ namespace Verbot
         {
             if (!ReleaseTags.Any()) return true;
 
-            var passed = true;
-
-            var versionLookup = ReleaseTags.ToDictionary(t => t.Version);
-            ReleaseTagInfo GetTag(SemVersion version) => versionLookup[version];
-
-            var targetLookup = ReleaseTags.ToDictionary(t => t.Target);
-            ReleaseTagInfo FindTag(VerbotCommitInfo commit) =>
-                targetLookup.TryGetValue(commit, out var tag) ? tag : null;
-
             var minorReleaseTags = ReleaseTags.Where(t => t.Version.Patch == 0);
+            var passed = true;
             foreach (var tag in minorReleaseTags)
             {
                 var version = tag.Version;
                 if (version.Minor == 0) continue;
 
                 var previousMinorVersion = version.Change(minor: version.Minor - 1);
-                var previousMinorTag = GetTag(previousMinorVersion);
+                var previousMinorTag = GetReleaseTag(previousMinorVersion);
 
                 if (!tag.Target.DescendsFrom(previousMinorTag.Target))
                 {
@@ -397,7 +402,7 @@ namespace Verbot
                 var previousTag =
                     commitsSincePreviousMinor
                         .Take(commitsSincePreviousMinor.Count - 1)
-                        .Select(c => FindTag(c))
+                        .Select(c => FindReleaseTags(c).SingleOrDefault())
                         .Where(t => t != null)
                         .LastOrDefault();
                 var commitsSincePrevious =
@@ -430,17 +435,13 @@ namespace Verbot
             if (!ReleaseTags.Any()) return true;
 
             var passed = true;
-
-            var versionLookup = ReleaseTags.ToDictionary(t => t.Version);
-            ReleaseTagInfo GetTag(SemVersion version) => versionLookup[version];
-
             foreach (var tag in ReleaseTags)
             {
                 var version = tag.Version;
                 if (version.Patch == 0) continue;
 
                 var previousPatchVersion = version.Change(patch: version.Patch - 1);
-                var previousPatchTag = GetTag(previousPatchVersion);
+                var previousPatchTag = GetReleaseTag(previousPatchVersion);
 
                 if (!tag.Target.DescendsFrom(previousPatchTag.Target))
                 {

@@ -15,6 +15,8 @@ namespace Verbot
         IEnumerable<GitRef> RefsCache;
         IEnumerable<ReleaseTagInfo> ReleaseTagsCache;
         IEnumerable<MasterBranchInfo> MasterBranchesCache;
+        IDictionary<SemVersion, ReleaseTagInfo> VersionReleaseTagLookupCache;
+        ILookup<VerbotCommitInfo, ReleaseTagInfo> CommitReleaseTagLookupCache;
 
 
         public IEnumerable<GitRef> Refs =>
@@ -24,7 +26,7 @@ namespace Verbot
 
         public IEnumerable<GitRef> Tags =>
             Refs.Where(r => r.IsTag);
-            
+
 
         public IEnumerable<GitRef> Branches =>
             Refs.Where(r => r.IsBranch);
@@ -44,6 +46,26 @@ namespace Verbot
                     .Select(tag => new ReleaseTagInfo(tag.Ref, tag.Version, GetCommit(tag.Ref.Target)))
                     .OrderByDescending(tag => tag.Version)
                     .ToList());
+
+        
+        IDictionary<SemVersion, ReleaseTagInfo> VersionReleaseTagLookup =>
+            VersionReleaseTagLookupCache ?? (VersionReleaseTagLookupCache =
+                ReleaseTags.ToDictionary(t => t.Version));
+
+
+        ReleaseTagInfo GetReleaseTag(SemVersion version) =>
+            VersionReleaseTagLookup[version];
+
+
+        ILookup<VerbotCommitInfo, ReleaseTagInfo> CommitReleaseTagLookup =>
+            CommitReleaseTagLookupCache ?? (CommitReleaseTagLookupCache =
+                ReleaseTags.ToLookup(t => t.Target));
+
+
+        IEnumerable<ReleaseTagInfo> FindReleaseTags(VerbotCommitInfo commit) =>
+            CommitReleaseTagLookup.Contains(commit)
+                ? CommitReleaseTagLookup[commit]
+                : Enumerable.Empty<ReleaseTagInfo>();
 
 
         /// <summary>
