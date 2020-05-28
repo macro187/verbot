@@ -21,8 +21,8 @@ namespace Verbot
 
 
         public SemVersion CalculateVersion(VerbotCommitInfo commit) =>
-            ReleaseTags
-                .Where(tag => tag.Target == commit)
+            Releases
+                .Where(tag => tag.Commit == commit)
                 .Select(tag => tag.Version)
                 .SingleOrDefault() ??
             CalculatePrereleaseVersion(commit);
@@ -41,14 +41,14 @@ namespace Verbot
                 TraceVerbose($"{version} ({description})");
 
             var mostRecentReleaseTag =
-                ReleaseTags
-                    .Where(t => t.Target != commit)
-                    .FirstOrDefault(t => GitRepository.IsAncestor(t.Target.Sha1, commit.Sha1));
+                Releases
+                    .Where(t => t.Commit != commit)
+                    .FirstOrDefault(t => GitRepository.IsAncestor(t.Commit.Sha1, commit.Sha1));
 
             if (mostRecentReleaseTag != null)
             {
                 version = mostRecentReleaseTag.Version;
-                TraceStep($"Previous release tag at {mostRecentReleaseTag.Target.Sha1}");
+                TraceStep($"Previous release tag at {mostRecentReleaseTag.Commit.Sha1}");
             }
             else
             {
@@ -57,7 +57,7 @@ namespace Verbot
             }
 
             var commitsSincePreviousRelease =
-                GetCommits(GitRepository.ListCommits(mostRecentReleaseTag?.Name, commit.Sha1)).ToList();
+                GetCommits(GitRepository.ListCommits(mostRecentReleaseTag?.Commit.Sha1, commit.Sha1)).ToList();
             var firstMajorChange = (VerbotCommitInfo)null;
             var firstMinorChange = (VerbotCommitInfo)null;
             foreach (var c in commitsSincePreviousRelease)

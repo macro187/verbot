@@ -241,12 +241,12 @@ namespace Verbot
         {
             var passed = true;
 
-            foreach (var tags in CommitReleaseTagLookup)
+            foreach (var releases in CommitReleaseLookup)
             {
-                if (tags.Count() <= 1) continue;
-                var sha1 = tags.Key.Sha1;
-                var tagNames = string.Join(", ", tags.Select(t => t.Name));
-                Trace.TraceError($"Multiple releases on commit {sha1}: {tagNames}");
+                if (releases.Count() <= 1) continue;
+                var sha1 = releases.Key.Sha1;
+                var releaseNames = string.Join(", ", releases.Select(t => t.Version));
+                Trace.TraceError($"Multiple releases on commit {sha1}: {releaseNames}");
                 passed = false;
             }
 
@@ -259,9 +259,9 @@ namespace Verbot
 
         void CheckForMissingReleaseTags()
         {
-            if (!ReleaseTags.Any()) return;
+            if (!Releases.Any()) return;
 
-            var allVersions = new HashSet<SemVersion>(ReleaseTags.Select(tag => tag.Version));
+            var allVersions = new HashSet<SemVersion>(Releases.Select(r => r.Version));
             var missingVersions = new List<SemVersion>();
 
             var latestVersion = allVersions.Max();
@@ -335,36 +335,36 @@ namespace Verbot
 
         bool CheckMajorReleaseLineage()
         {
-            if (!ReleaseTags.Any()) return true;
+            if (!Releases.Any()) return true;
 
-            var majorTags = ReleaseTags.Where(t => t.Version.Minor == 0 && t.Version.Patch == 0);
+            var majorReleases = Releases.Where(r => r.Version.Minor == 0 && r.Version.Patch == 0);
             var passed = true;
-            foreach (var tag in majorTags)
+            foreach (var release in majorReleases)
             {
-                var version = tag.Version;
+                var version = release.Version;
                 var previousMajorVersion = version.Change(major: version.Major - 1);
-                var previousMajorTag = previousMajorVersion.Major > 0 ? GetReleaseTag(previousMajorVersion) : null;
+                var previousMajorRelease = previousMajorVersion.Major > 0 ? GetRelease(previousMajorVersion) : null;
 
-                if (version.Major > 1 && !tag.Target.DescendsFrom(previousMajorTag.Target))
+                if (version.Major > 1 && !release.Commit.DescendsFrom(previousMajorRelease.Commit))
                 {
                     Trace.TraceError($"Release {version} does not descend from {previousMajorVersion}");
                     passed = false;
                     continue;
                 }
 
-                var commitsSincePreviousMajor = tag.Target.ListCommitsFrom(previousMajorTag?.Target).ToList();
-                var previousTag =
+                var commitsSincePreviousMajor = release.Commit.ListCommitsFrom(previousMajorRelease?.Commit).ToList();
+                var previousRelease =
                     commitsSincePreviousMajor
                         .Take(commitsSincePreviousMajor.Count - 1)
-                        .Select(c => FindReleaseTags(c).SingleOrDefault())
+                        .Select(c => GetReleases(c).SingleOrDefault())
                         .Where(t => t != null)
                         .LastOrDefault();
                 var commitsSincePrevious =
-                    previousTag != null
-                        ? tag.Target.ListCommitsFrom(previousTag.Target).ToList()
+                    previousRelease != null
+                        ? release.Commit.ListCommitsFrom(previousRelease.Commit).ToList()
                         : commitsSincePreviousMajor;
-                previousTag = previousTag ?? previousMajorTag;
-                var previousVersion = previousTag?.Version ?? new SemVersion(0, 0, 0);
+                previousRelease = previousRelease ?? previousMajorRelease;
+                var previousVersion = previousRelease?.Version ?? new SemVersion(0, 0, 0);
 
                 var breakingChange = commitsSincePrevious.FirstOrDefault(c => c.IsBreaking);
                 if (breakingChange == null)
@@ -379,38 +379,38 @@ namespace Verbot
 
         bool CheckMinorReleaseLineage()
         {
-            if (!ReleaseTags.Any()) return true;
+            if (!Releases.Any()) return true;
 
-            var minorReleaseTags = ReleaseTags.Where(t => t.Version.Patch == 0);
+            var minorReleases = Releases.Where(r => r.Version.Patch == 0);
             var passed = true;
-            foreach (var tag in minorReleaseTags)
+            foreach (var release in minorReleases)
             {
-                var version = tag.Version;
+                var version = release.Version;
                 if (version.Minor == 0) continue;
 
                 var previousMinorVersion = version.Change(minor: version.Minor - 1);
-                var previousMinorTag = GetReleaseTag(previousMinorVersion);
+                var previousMinorRelease = GetRelease(previousMinorVersion);
 
-                if (!tag.Target.DescendsFrom(previousMinorTag.Target))
+                if (!release.Commit.DescendsFrom(previousMinorRelease.Commit))
                 {
                     Trace.TraceError($"Release {version} does not descend from {previousMinorVersion}");
                     passed = false;
                     continue;
                 }
 
-                var commitsSincePreviousMinor = tag.Target.ListCommitsFrom(previousMinorTag.Target).ToList();
-                var previousTag =
+                var commitsSincePreviousMinor = release.Commit.ListCommitsFrom(previousMinorRelease.Commit).ToList();
+                var previousRelease =
                     commitsSincePreviousMinor
                         .Take(commitsSincePreviousMinor.Count - 1)
-                        .Select(c => FindReleaseTags(c).SingleOrDefault())
+                        .Select(c => GetReleases(c).SingleOrDefault())
                         .Where(t => t != null)
                         .LastOrDefault();
                 var commitsSincePrevious =
-                    previousTag != null
-                        ? tag.Target.ListCommitsFrom(previousTag.Target).ToList()
+                    previousRelease != null
+                        ? release.Commit.ListCommitsFrom(previousRelease.Commit).ToList()
                         : commitsSincePreviousMinor;
-                previousTag = previousTag ?? previousMinorTag;
-                var previousVersion = previousTag.Version;
+                previousRelease = previousRelease ?? previousMinorRelease;
+                var previousVersion = previousRelease.Version;
 
                 var breakingChange = commitsSincePrevious.FirstOrDefault(c => c.IsBreaking);
                 if (breakingChange != null)
@@ -432,25 +432,25 @@ namespace Verbot
 
         bool CheckPatchReleaseLineage()
         {
-            if (!ReleaseTags.Any()) return true;
+            if (!Releases.Any()) return true;
 
             var passed = true;
-            foreach (var tag in ReleaseTags)
+            foreach (var release in Releases)
             {
-                var version = tag.Version;
+                var version = release.Version;
                 if (version.Patch == 0) continue;
 
                 var previousPatchVersion = version.Change(patch: version.Patch - 1);
-                var previousPatchTag = GetReleaseTag(previousPatchVersion);
+                var previousPatchRelease = GetRelease(previousPatchVersion);
 
-                if (!tag.Target.DescendsFrom(previousPatchTag.Target))
+                if (!release.Commit.DescendsFrom(previousPatchRelease.Commit))
                 {
                     Trace.TraceError($"Release {version} does not descend from {previousPatchVersion}");
                     passed = false;
                     continue;
                 }
 
-                var commitsSincePreviousPatch = tag.Target.ListCommitsFrom(previousPatchTag.Target).ToList();
+                var commitsSincePreviousPatch = release.Commit.ListCommitsFrom(previousPatchRelease.Commit).ToList();
 
                 var breakingChange = commitsSincePreviousPatch.FirstOrDefault(c => c.IsBreaking);
                 if (breakingChange != null)
