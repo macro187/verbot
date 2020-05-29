@@ -13,7 +13,8 @@ namespace Verbot
     {
         
         IEnumerable<GitRef> RefsCache;
-        IEnumerable<ReleaseInfo> ReleaseCache;
+        IEnumerable<ReleaseInfo> ReleasesAscendingCache;
+        IEnumerable<ReleaseInfo> ReleasesDescendingCache;
         IEnumerable<MasterBranchInfo> MasterBranchesCache;
         IDictionary<SemVersion, ReleaseInfo> VersionReleaseLookupCache;
         ILookup<VerbotCommitInfo, ReleaseInfo> CommitReleaseLookupCache;
@@ -32,8 +33,8 @@ namespace Verbot
             Refs.Where(r => r.IsBranch);
 
 
-        public IEnumerable<ReleaseInfo> Releases =>
-            ReleaseCache ?? (ReleaseCache =
+        public IEnumerable<ReleaseInfo> ReleasesAscending =>
+            ReleasesAscendingCache ?? (ReleasesAscendingCache =
                 Tags
                     .Select(tag =>
                     {
@@ -43,26 +44,43 @@ namespace Verbot
                     .Where(tag => tag.Version != null)
                     .Where(tag => tag.Version.Prerelease == "")
                     .Where(tag => tag.Version.Build == "")
-                    .Select(tag => new ReleaseInfo(tag.Version, GetCommit(tag.Ref.Target), tag.Ref))
-                    .OrderByDescending(tag => tag.Version)
+                    .Select(tag => new ReleaseInfo(this, tag.Version, GetCommit(tag.Ref.Target), tag.Ref))
+                    .OrderBy(release => release.Version)
                     .ToList());
+
+
+        public IEnumerable<ReleaseInfo> ReleasesDescending =>
+            ReleasesDescendingCache ?? (ReleasesDescendingCache =
+                ReleasesAscending.Reverse().ToList());
+
+
+        public IEnumerable<ReleaseInfo> MajorReleases =>
+            ReleasesDescending.Where(r => r.IsMajor);
+
+        
+        public IEnumerable<ReleaseInfo> MinorReleases =>
+            ReleasesDescending.Where(r => r.IsMinor);
 
         
         IDictionary<SemVersion, ReleaseInfo> VersionReleaseLookup =>
             VersionReleaseLookupCache ?? (VersionReleaseLookupCache =
-                Releases.ToDictionary(t => t.Version));
+                ReleasesDescending.ToDictionary(t => t.Version));
 
 
-        ReleaseInfo GetRelease(SemVersion version) =>
+        public ReleaseInfo GetRelease(SemVersion version) =>
             VersionReleaseLookup[version];
+
+
+        public ReleaseInfo FindRelease(SemVersion version) =>
+            VersionReleaseLookup.ContainsKey(version) ? VersionReleaseLookup[version] : null;
 
 
         ILookup<VerbotCommitInfo, ReleaseInfo> CommitReleaseLookup =>
             CommitReleaseLookupCache ?? (CommitReleaseLookupCache =
-                Releases.ToLookup(t => t.Commit));
+                ReleasesDescending.ToLookup(t => t.Commit));
 
 
-        IEnumerable<ReleaseInfo> GetReleases(VerbotCommitInfo commit) =>
+        public IEnumerable<ReleaseInfo> GetReleases(VerbotCommitInfo commit) =>
             CommitReleaseLookup.Contains(commit)
                 ? CommitReleaseLookup[commit]
                 : Enumerable.Empty<ReleaseInfo>();
@@ -94,7 +112,7 @@ namespace Verbot
 
 
         public IEnumerable<GitRefWithRemote> FindReleaseTagsWithRemote() =>
-            GetRemoteInfo(Releases.Select(t => t.Tag)).ToList();
+            GetRemoteInfo(ReleasesDescending.Select(t => t.Tag)).ToList();
 
 
         public IEnumerable<GitRefWithRemote> GetVerbotBranchesWithRemote() =>

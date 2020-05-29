@@ -14,7 +14,7 @@ namespace Verbot
         {
             var version = CalculateReleaseVersion();
 
-            if (Releases.Any(tag => tag.Version == version))
+            if (ReleasesDescending.Any(tag => tag.Version == version))
             {
                 throw new UserException($"Version {version} has already been released");
             }

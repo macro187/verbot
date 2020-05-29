@@ -16,9 +16,11 @@ namespace Verbot
             CheckForVersionLocations();
             CheckForConflictingVersions();
             CheckForMissingVersions();
+            CheckForReleaseZero();
             CheckForMultipleReleasesFromSingleCommit();
             CheckForMissingReleaseTags();
             CheckReleaseLineage();
+            CheckReleaseSemverCommits();
         }
 
 
@@ -237,6 +239,15 @@ namespace Verbot
         }
 
 
+        void CheckForReleaseZero()
+        {
+            if (FindRelease(new SemVersion(0, 0, 0)) != null)
+            {
+                throw new UserException("Found release 0.0.0");
+            }
+        }
+
+
         void CheckForMultipleReleasesFromSingleCommit()
         {
             var passed = true;
@@ -259,9 +270,9 @@ namespace Verbot
 
         void CheckForMissingReleaseTags()
         {
-            if (!Releases.Any()) return;
+            if (!ReleasesDescending.Any()) return;
 
-            var allVersions = new HashSet<SemVersion>(Releases.Select(r => r.Version));
+            var allVersions = new HashSet<SemVersion>(ReleasesDescending.Select(r => r.Version));
             var missingVersions = new List<SemVersion>();
 
             var latestVersion = allVersions.Max();
@@ -323,9 +334,11 @@ namespace Verbot
         void CheckReleaseLineage()
         {
             var passed =
-                CheckMajorReleaseLineage() &
-                CheckMinorReleaseLineage() &
-                CheckPatchReleaseLineage();
+                ReleasesAscending.Aggregate(true, (result, release) =>
+                    result &=
+                        release.IsMajor ? CheckMajorReleaseLineage(release)
+                        : release.IsMinor ? CheckMinorReleaseLineage(release)
+                        : CheckPatchReleaseLineage(release));
 
             if (!passed)
             {
@@ -333,143 +346,124 @@ namespace Verbot
             }
         }
 
-        bool CheckMajorReleaseLineage()
+
+        bool CheckMajorReleaseLineage(ReleaseInfo release)
         {
-            if (!Releases.Any()) return true;
-
-            var majorReleases = Releases.Where(r => r.Version.Minor == 0 && r.Version.Patch == 0);
-            var passed = true;
-            foreach (var release in majorReleases)
+            var version = release.Version;
+            if (release.PreviousMajor != null)
             {
-                var version = release.Version;
-                var previousMajorVersion = version.Change(major: version.Major - 1);
-                var previousMajorRelease = previousMajorVersion.Major > 0 ? GetRelease(previousMajorVersion) : null;
-
-                if (version.Major > 1 && !release.Commit.DescendsFrom(previousMajorRelease.Commit))
+                var previousMajorVersion = release.PreviousMajor.Version;
+                if (!release.Commit.DescendsFrom(release.PreviousMajor.Commit))
                 {
                     Trace.TraceError($"Release {version} does not descend from {previousMajorVersion}");
-                    passed = false;
-                    continue;
-                }
-
-                var commitsSincePreviousMajor = release.Commit.ListCommitsFrom(previousMajorRelease?.Commit).ToList();
-                var previousRelease =
-                    commitsSincePreviousMajor
-                        .Take(commitsSincePreviousMajor.Count - 1)
-                        .Select(c => GetReleases(c).SingleOrDefault())
-                        .Where(t => t != null)
-                        .LastOrDefault();
-                var commitsSincePrevious =
-                    previousRelease != null
-                        ? release.Commit.ListCommitsFrom(previousRelease.Commit).ToList()
-                        : commitsSincePreviousMajor;
-                previousRelease = previousRelease ?? previousMajorRelease;
-                var previousVersion = previousRelease?.Version ?? new SemVersion(0, 0, 0);
-
-                var breakingChange = commitsSincePrevious.FirstOrDefault(c => c.IsBreaking);
-                if (breakingChange == null)
-                {
-                    Trace.TraceWarning($"No breaking change(s) between {previousVersion} and {version}");
-                    continue;
+                    return false;
                 }
             }
-
-            return passed;
+            return true;
         }
 
-        bool CheckMinorReleaseLineage()
+
+        bool CheckMinorReleaseLineage(ReleaseInfo release)
         {
-            if (!Releases.Any()) return true;
-
-            var minorReleases = Releases.Where(r => r.Version.Patch == 0);
-            var passed = true;
-            foreach (var release in minorReleases)
+            var version = release.Version;
+            if (!release.Commit.DescendsFrom(release.PreviousMinorNumeric.Commit))
             {
-                var version = release.Version;
-                if (version.Minor == 0) continue;
-
-                var previousMinorVersion = version.Change(minor: version.Minor - 1);
-                var previousMinorRelease = GetRelease(previousMinorVersion);
-
-                if (!release.Commit.DescendsFrom(previousMinorRelease.Commit))
-                {
-                    Trace.TraceError($"Release {version} does not descend from {previousMinorVersion}");
-                    passed = false;
-                    continue;
-                }
-
-                var commitsSincePreviousMinor = release.Commit.ListCommitsFrom(previousMinorRelease.Commit).ToList();
-                var previousRelease =
-                    commitsSincePreviousMinor
-                        .Take(commitsSincePreviousMinor.Count - 1)
-                        .Select(c => GetReleases(c).SingleOrDefault())
-                        .Where(t => t != null)
-                        .LastOrDefault();
-                var commitsSincePrevious =
-                    previousRelease != null
-                        ? release.Commit.ListCommitsFrom(previousRelease.Commit).ToList()
-                        : commitsSincePreviousMinor;
-                previousRelease = previousRelease ?? previousMinorRelease;
-                var previousVersion = previousRelease.Version;
-
-                var breakingChange = commitsSincePrevious.FirstOrDefault(c => c.IsBreaking);
-                if (breakingChange != null)
-                {
-                    Trace.TraceWarning($"Breaking change(s) between {previousVersion} and {version}");
-                    Trace.TraceWarning(breakingChange.Sha1);
-                    Trace.TraceWarning(breakingChange.Message);
-                }
-
-                var featureChange = commitsSincePrevious.FirstOrDefault(c => c.IsFeature);
-                if (featureChange == null)
-                {
-                    Trace.TraceWarning($"No feature change(s) between {previousVersion} and {version}");
-                }
+                var previousMinorVersion = release.PreviousMinorNumeric.Version;
+                Trace.TraceError($"Release {version} does not descend from {previousMinorVersion}");
+                return false;
             }
-
-            return passed;
+            return true;
         }
 
-        bool CheckPatchReleaseLineage()
+
+        bool CheckPatchReleaseLineage(ReleaseInfo release)
         {
-            if (!Releases.Any()) return true;
-
-            var passed = true;
-            foreach (var release in Releases)
+            var version = release.Version;
+            if (!release.Commit.DescendsFrom(release.PreviousNumeric.Commit))
             {
-                var version = release.Version;
-                if (version.Patch == 0) continue;
+                var previousVersion = release.PreviousNumeric.Version;
+                Trace.TraceError($"Release {version} does not descend from {previousVersion}");
+                return false;
+            }
+            return true;
+        }
 
-                var previousPatchVersion = version.Change(patch: version.Patch - 1);
-                var previousPatchRelease = GetRelease(previousPatchVersion);
 
-                if (!release.Commit.DescendsFrom(previousPatchRelease.Commit))
+        void CheckReleaseSemverCommits()
+        {
+            foreach (var release in ReleasesAscending)
+            {
+                if (release.IsMajor)
                 {
-                    Trace.TraceError($"Release {version} does not descend from {previousPatchVersion}");
-                    passed = false;
-                    continue;
+                    CheckMajorReleaseSemverCommits(release);
                 }
-
-                var commitsSincePreviousPatch = release.Commit.ListCommitsFrom(previousPatchRelease.Commit).ToList();
-
-                var breakingChange = commitsSincePreviousPatch.FirstOrDefault(c => c.IsBreaking);
-                if (breakingChange != null)
+                else if (release.IsMinor)
                 {
-                    Trace.TraceWarning($"Breaking change(s) between {previousPatchVersion} and {version}");
-                    Trace.TraceWarning(breakingChange.Sha1);
-                    Trace.TraceWarning(breakingChange.Message);
+                    CheckMinorReleaseSemverCommits(release);
                 }
-
-                var featureChange = commitsSincePreviousPatch.FirstOrDefault(c => c.IsFeature);
-                if (featureChange != null)
+                else
                 {
-                    Trace.TraceWarning($"Feature change(s) between {previousPatchVersion} and {version}");
-                    Trace.TraceWarning(featureChange.Sha1);
-                    Trace.TraceWarning(featureChange.Message);
+                    CheckPatchReleaseSemverCommits(release);
                 }
             }
+        }
 
-            return passed;
+
+        void CheckMajorReleaseSemverCommits(ReleaseInfo release)
+        {
+            var version = release.Version;
+            var breakingChange = release.CommitsSincePreviousAncestor.FirstOrDefault(c => c.IsBreaking);
+            if (breakingChange == null)
+            {
+                var previousVersion = release.PreviousAncestor?.Version ?? "beginning";
+                Trace.TraceWarning($"No breaking change(s) between {previousVersion} and {version}");
+            }
+        }
+
+
+        void CheckMinorReleaseSemverCommits(ReleaseInfo release)
+        {
+            var version = release.Version;
+
+            var breakingChange = release.CommitsSincePreviousAncestor.FirstOrDefault(c => c.IsBreaking);
+            if (breakingChange != null)
+            {
+                var previousVersion = release.PreviousAncestor?.Version ?? "beginning";
+                Trace.TraceWarning($"Breaking change between {previousVersion} and {version}");
+                Trace.TraceWarning(breakingChange.Sha1);
+                Trace.TraceWarning(breakingChange.Message);
+            }
+
+            var featureChange = release.CommitsSincePreviousAncestor.FirstOrDefault(c => c.IsFeature);
+            if (featureChange == null)
+            {
+                var previousVersion = release.PreviousAncestor?.Version ?? "beginning";
+                Trace.TraceWarning($"No feature change(s) between {previousVersion} and {version}");
+            }
+        }
+
+
+        void CheckPatchReleaseSemverCommits(ReleaseInfo release)
+        {
+            var version = release.Version;
+
+            var breakingChange = release.CommitsSincePreviousAncestor.FirstOrDefault(c => c.IsBreaking);
+            if (breakingChange != null)
+            {
+                var previousVersion = release.PreviousAncestor?.Version ?? "beginning";
+                Trace.TraceWarning($"Breaking change between {previousVersion} and {version}");
+                Trace.TraceWarning(breakingChange.Sha1);
+                Trace.TraceWarning(breakingChange.Message);
+            }
+
+            var featureChange = release.CommitsSincePreviousAncestor.FirstOrDefault(c => c.IsFeature);
+            if (featureChange != null)
+            {
+                var previousVersion = release.PreviousAncestor?.Version ?? "beginning";
+                Trace.TraceWarning($"Feature change(s) between {previousVersion} and {version}");
+                Trace.TraceWarning(featureChange.Sha1);
+                Trace.TraceWarning(featureChange.Message);
+            }
         }
 
     }

@@ -21,7 +21,7 @@ namespace Verbot
 
 
         public SemVersion CalculateVersion(VerbotCommitInfo commit) =>
-            Releases
+            ReleasesDescending
                 .Where(tag => tag.Commit == commit)
                 .Select(tag => tag.Version)
                 .SingleOrDefault() ??
@@ -41,7 +41,7 @@ namespace Verbot
                 TraceVerbose($"{version} ({description})");
 
             var mostRecentReleaseTag =
-                Releases
+                ReleasesDescending
                     .Where(t => t.Commit != commit)
                     .FirstOrDefault(t => GitRepository.IsAncestor(t.Commit.Sha1, commit.Sha1));
 
