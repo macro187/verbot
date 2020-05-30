@@ -2,7 +2,6 @@ using System.Linq;
 using MacroExceptions;
 using System.Diagnostics;
 using MacroGit;
-using System;
 using MacroSemver;
 using System.Collections.Generic;
 
