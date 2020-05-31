@@ -20,7 +20,7 @@ namespace Verbot
             CalculatePrereleaseVersion(GetHeadCommit());
 
 
-        public SemVersion CalculateVersion(VerbotCommitInfo commit) =>
+        public SemVersion CalculateVersion(CommitInfo commit) =>
             ReleasesDescending
                 .Where(tag => tag.Commit == commit)
                 .Select(tag => tag.Version)
@@ -28,12 +28,12 @@ namespace Verbot
             CalculatePrereleaseVersion(commit);
 
 
-        public SemVersion CalculateReleaseVersion(VerbotCommitInfo commit) =>
+        public SemVersion CalculateReleaseVersion(CommitInfo commit) =>
             CalculateVersion(commit)
                 .Change(prerelease: "", build: "");
 
 
-        SemVersion CalculatePrereleaseVersion(VerbotCommitInfo commit)
+        SemVersion CalculatePrereleaseVersion(CommitInfo commit)
         {
             SemVersion version;
 
@@ -58,8 +58,8 @@ namespace Verbot
 
             var commitsSincePreviousRelease =
                 GetCommits(GitRepository.ListCommits(mostRecentReleaseTag?.Commit.Sha1, commit.Sha1)).ToList();
-            var firstMajorChange = (VerbotCommitInfo)null;
-            var firstMinorChange = (VerbotCommitInfo)null;
+            var firstMajorChange = (CommitInfo)null;
+            var firstMinorChange = (CommitInfo)null;
             foreach (var c in commitsSincePreviousRelease)
             {
                 if (c.IsBreaking)

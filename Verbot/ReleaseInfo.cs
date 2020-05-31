@@ -10,7 +10,7 @@ namespace Verbot
     class ReleaseInfo
     {
 
-        public ReleaseInfo(VerbotRepository repository, SemVersion version, VerbotCommitInfo commit, GitRef tag)
+        public ReleaseInfo(VerbotRepository repository, SemVersion version, CommitInfo commit, GitRef tag)
         {
             Guard.NotNull(repository, nameof(repository));
             Guard.NotNull(tag, nameof(tag));
@@ -34,7 +34,7 @@ namespace Verbot
 
         VerbotRepository Repository { get; }
         public SemVersion Version { get; }
-        public VerbotCommitInfo Commit { get; }
+        public CommitInfo Commit { get; }
         public GitRef Tag { get; }
 
 
@@ -86,27 +86,27 @@ namespace Verbot
                 .FirstOrDefault();
 
 
-        public IEnumerable<VerbotCommitInfo> CommitsSincePreviousMajor =>
+        public IEnumerable<CommitInfo> CommitsSincePreviousMajor =>
             CommitsSince(PreviousMajor);
 
 
-        public IEnumerable<VerbotCommitInfo> CommitsSincePreviousMinorAncestor =>
+        public IEnumerable<CommitInfo> CommitsSincePreviousMinorAncestor =>
             CommitsSince(PreviousMinorAncestor);
 
 
-        public IEnumerable<VerbotCommitInfo> CommitsSincePreviousAncestor =>
+        public IEnumerable<CommitInfo> CommitsSincePreviousAncestor =>
             CommitsSince(PreviousAncestor);
 
         
-        public IEnumerable<VerbotCommitInfo> CommitsSinceBeginning =>
-            CommitsSince((VerbotCommitInfo)null);
+        public IEnumerable<CommitInfo> CommitsSinceBeginning =>
+            CommitsSince((CommitInfo)null);
 
         
-        public IEnumerable<VerbotCommitInfo> CommitsSince(ReleaseInfo release) =>
+        public IEnumerable<CommitInfo> CommitsSince(ReleaseInfo release) =>
             CommitsSince(release?.Commit);
 
         
-        public IEnumerable<VerbotCommitInfo> CommitsSince(VerbotCommitInfo commit) =>
+        public IEnumerable<CommitInfo> CommitsSince(CommitInfo commit) =>
             Commit.CommitsSince(commit);
 
     }

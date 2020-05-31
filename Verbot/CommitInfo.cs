@@ -6,7 +6,7 @@ using MacroSystem;
 
 namespace Verbot
 {
-    partial class VerbotCommitInfo
+    class CommitInfo
     {
 
         readonly VerbotRepository VerbotRepository;
@@ -20,7 +20,7 @@ namespace Verbot
         /// Assumed to exist in <paramref name="gitRepository"/>
         /// </param>
         ///
-        public VerbotCommitInfo(VerbotRepository verbotRepository, GitRepository gitRepository, GitSha1 sha1)
+        public CommitInfo(VerbotRepository verbotRepository, GitRepository gitRepository, GitSha1 sha1)
         {
             VerbotRepository = verbotRepository;
             GitRepository = gitRepository;
@@ -75,11 +75,11 @@ namespace Verbot
         }
 
 
-        public bool DescendsFrom(VerbotCommitInfo commit) =>
+        public bool DescendsFrom(CommitInfo commit) =>
             GitRepository.IsAncestor(commit.Sha1, Sha1);
 
 
-        public IEnumerable<VerbotCommitInfo> CommitsSince(VerbotCommitInfo commit) =>
+        public IEnumerable<CommitInfo> CommitsSince(CommitInfo commit) =>
             VerbotRepository.GetCommitsBetween(commit?.Sha1, Sha1);
 
     }

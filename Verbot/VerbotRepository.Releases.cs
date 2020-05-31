@@ -10,7 +10,7 @@ namespace Verbot
         IEnumerable<ReleaseInfo> ReleasesAscendingCache;
         IEnumerable<ReleaseInfo> ReleasesDescendingCache;
         IDictionary<SemVersion, ReleaseInfo> VersionReleaseLookupCache;
-        ILookup<VerbotCommitInfo, ReleaseInfo> CommitReleaseLookupCache;
+        ILookup<CommitInfo, ReleaseInfo> CommitReleaseLookupCache;
 
 
         public IEnumerable<ReleaseInfo> ReleasesAscending =>
@@ -55,12 +55,12 @@ namespace Verbot
             VersionReleaseLookup.ContainsKey(version) ? VersionReleaseLookup[version] : null;
 
 
-        ILookup<VerbotCommitInfo, ReleaseInfo> CommitReleaseLookup =>
+        ILookup<CommitInfo, ReleaseInfo> CommitReleaseLookup =>
             CommitReleaseLookupCache ?? (CommitReleaseLookupCache =
                 ReleasesDescending.ToLookup(t => t.Commit));
 
 
-        public IEnumerable<ReleaseInfo> GetReleases(VerbotCommitInfo commit) =>
+        public IEnumerable<ReleaseInfo> GetReleases(CommitInfo commit) =>
             CommitReleaseLookup.Contains(commit)
                 ? CommitReleaseLookup[commit]
                 : Enumerable.Empty<ReleaseInfo>();

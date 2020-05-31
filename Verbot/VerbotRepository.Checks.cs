@@ -153,8 +153,8 @@ namespace Verbot
         {
             var passed = true;
 
-            var memory = new HashSet<VerbotCommitInfo>();
-            bool Remember(VerbotCommitInfo commit) => !memory.Add(commit);
+            var memory = new HashSet<CommitInfo>();
+            bool Remember(CommitInfo commit) => !memory.Add(commit);
 
             foreach (var startRelease in ReleasesDescending)
             {
