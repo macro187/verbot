@@ -87,15 +87,27 @@ namespace Verbot
 
 
         public IEnumerable<VerbotCommitInfo> CommitsSincePreviousMajor =>
-            Repository.GetCommitsBetween(PreviousMajor?.Commit.Sha1, Commit.Sha1);
+            CommitsSince(PreviousMajor);
 
 
         public IEnumerable<VerbotCommitInfo> CommitsSincePreviousMinorAncestor =>
-            Repository.GetCommitsBetween(PreviousMinorAncestor?.Commit.Sha1, Commit.Sha1);
+            CommitsSince(PreviousMinorAncestor);
 
 
         public IEnumerable<VerbotCommitInfo> CommitsSincePreviousAncestor =>
-            Repository.GetCommitsBetween(PreviousAncestor?.Commit.Sha1, Commit.Sha1);
+            CommitsSince(PreviousAncestor);
+
+        
+        public IEnumerable<VerbotCommitInfo> CommitsSinceBeginning =>
+            CommitsSince((VerbotCommitInfo)null);
+
+        
+        public IEnumerable<VerbotCommitInfo> CommitsSince(ReleaseInfo release) =>
+            CommitsSince(release?.Commit);
+
+        
+        public IEnumerable<VerbotCommitInfo> CommitsSince(VerbotCommitInfo commit) =>
+            Commit.CommitsSince(commit);
 
     }
 }

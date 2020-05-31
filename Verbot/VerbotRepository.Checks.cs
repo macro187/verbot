@@ -159,7 +159,7 @@ namespace Verbot
             foreach (var startRelease in ReleasesDescending)
             {
                 var descendent = startRelease.Version;
-                foreach (var commit in GetCommitsBetween(null, startRelease.Commit.Sha1).Reverse().Skip(1))
+                foreach (var commit in startRelease.CommitsSinceBeginning.Reverse().Skip(1))
                 {
                     if (Remember(commit)) continue;
                     var release = GetReleases(commit).SingleOrDefault();

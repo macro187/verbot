@@ -79,7 +79,7 @@ namespace Verbot
             GitRepository.IsAncestor(commit.Sha1, Sha1);
 
 
-        public IEnumerable<VerbotCommitInfo> ListCommitsFrom(VerbotCommitInfo commit) =>
+        public IEnumerable<VerbotCommitInfo> CommitsSince(VerbotCommitInfo commit) =>
             VerbotRepository.GetCommitsBetween(commit?.Sha1, Sha1);
 
     }
