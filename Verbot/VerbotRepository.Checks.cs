@@ -21,6 +21,7 @@ namespace Verbot
             CheckReleaseOrdering();
             CheckReleaseLineage();
             CheckReleaseSemverCommits();
+            CheckLatestBranches();
         }
 
 
@@ -107,13 +108,7 @@ namespace Verbot
 
         IEnumerable<SemVersion> CheckForMissingMinorReleases()
         {
-            var latestMajorSeriesReleases =
-                ReleasesAscending
-                    .GroupBy(r => r.Version.Change(minor: 0, patch: 0))
-                    .Select(g => g.OrderBy(r => r.Version).Last())
-                    .OrderBy(r => r.Version);
-
-            foreach (var latestRelease in latestMajorSeriesReleases)
+            foreach (var latestRelease in LatestMajorSeriesReleases)
             {
                 for (var minor = 1; minor <= latestRelease.Version.Minor; minor++)
                 {
@@ -129,13 +124,7 @@ namespace Verbot
 
         IEnumerable<SemVersion> CheckForMissingPatchReleases()
         {
-            var latestMinorSeriesReleases =
-                ReleasesAscending
-                    .GroupBy(r => r.Version.Change(patch: 0))
-                    .Select(g => g.OrderBy(r => r.Version).Last())
-                    .OrderBy(r => r.Version);
-
-            foreach (var latestRelease in latestMinorSeriesReleases)
+            foreach (var latestRelease in LatestMinorSeriesReleases)
             {
                 for (var patch = 1; patch < latestRelease.Version.Patch; patch++)
                 {
@@ -314,6 +303,27 @@ namespace Verbot
                 Trace.TraceWarning($"Feature change(s) between {previousVersion} and {version}");
                 Trace.TraceWarning(featureChange.Sha1);
                 Trace.TraceWarning(featureChange.Message);
+            }
+        }
+
+
+        void CheckLatestBranches()
+        {
+            foreach (var branchThatShouldExist in GetLatestBranchesThatShouldExist())
+            {
+                var name = branchThatShouldExist.Name;
+                var branch = FindBranch(name);
+                if (branch == null)
+                {
+                    Trace.TraceWarning($"Missing {name} branch");
+                    continue;
+                }
+
+                var correctSha1 = branchThatShouldExist.Release.Commit.Sha1;
+                if (branch.Target != correctSha1)
+                {
+                    Trace.TraceWarning($"{name} branch should be at commit {correctSha1}");
+                }
             }
         }
 

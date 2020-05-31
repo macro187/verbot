@@ -41,6 +41,19 @@ namespace Verbot
         public IEnumerable<ReleaseInfo> MinorReleases =>
             ReleasesDescending.Where(r => r.IsMinor);
 
+
+        public IEnumerable<ReleaseInfo> LatestMajorSeriesReleases =>
+            ReleasesAscending
+                .GroupBy(r => r.Version.Change(minor: 0, patch: 0))
+                .Select(g => g.OrderBy(r => r.Version).Last())
+                .OrderBy(r => r.Version);
+
+
+        public IEnumerable<ReleaseInfo> LatestMinorSeriesReleases =>
+            ReleasesAscending
+                .GroupBy(r => r.Version.Change(patch: 0))
+                .Select(g => g.OrderBy(r => r.Version).Last())
+                .OrderBy(r => r.Version);
         
         IDictionary<SemVersion, ReleaseInfo> VersionReleaseLookup =>
             VersionReleaseLookupCache ?? (VersionReleaseLookupCache =

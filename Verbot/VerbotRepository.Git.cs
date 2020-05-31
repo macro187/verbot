@@ -23,6 +23,10 @@ namespace Verbot
             Refs.Where(r => r.IsBranch);
 
 
+        public GitRef FindBranch(GitRefNameComponent name) =>
+            Branches.Where(b => b.Name == name).SingleOrDefault();
+
+
         IEnumerable<GitRefWithRemote> GetRemoteInfo(IEnumerable<GitRef> refs)
         {
             var remoteRefs = GitRepository.GetRemoteRefs().ToDictionary(r => r.FullName, r => r.Target);
