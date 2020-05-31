@@ -10,20 +10,6 @@ namespace Verbot
     partial class VerbotRepository
     {
 
-        public void Release()
-        {
-            var version = CalculateReleaseVersion();
-
-            if (ReleasesDescending.Any(tag => tag.Version == version))
-            {
-                throw new UserException($"Version {version} has already been released");
-            }
-
-            Trace.TraceInformation($"Tagging {version}");
-            GitRepository.CreateTag(new GitRefNameComponent(version));
-        }
-
-
         void OldRelease()
         {
             CheckLocal();

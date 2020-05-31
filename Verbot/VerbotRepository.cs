@@ -40,5 +40,19 @@ namespace Verbot
             Trace.TraceInformation(message);
         }
 
+
+        public void Release()
+        {
+            var version = CalculateReleaseVersion();
+
+            if (FindRelease(version) != null)
+            {
+                throw new UserException($"Version {version} has already been released");
+            }
+
+            Trace.TraceInformation($"Tagging {version}");
+            GitRepository.CreateTag(new GitRefNameComponent(version));
+        }
+
     }
 }
