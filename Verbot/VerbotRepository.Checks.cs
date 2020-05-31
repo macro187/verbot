@@ -18,6 +18,7 @@ namespace Verbot
             CheckForReleaseZero();
             CheckForMultipleReleasesFromSingleCommit();
             CheckForMissingReleases();
+            CheckReleaseOrdering();
             CheckReleaseLineage();
             CheckReleaseSemverCommits();
         }
@@ -144,6 +145,37 @@ namespace Verbot
                         yield return patchVersion;
                     }
                 }
+            }
+        }
+
+
+        void CheckReleaseOrdering()
+        {
+            var passed = true;
+
+            var memory = new HashSet<VerbotCommitInfo>();
+            bool Remember(VerbotCommitInfo commit) => !memory.Add(commit);
+
+            foreach (var startRelease in ReleasesDescending)
+            {
+                var descendent = startRelease.Version;
+                foreach (var commit in GetCommitsBetween(null, startRelease.Commit.Sha1).Reverse().Skip(1))
+                {
+                    if (Remember(commit)) continue;
+                    var release = GetReleases(commit).SingleOrDefault();
+                    if (release == null) continue;
+                    var ancestor = release.Version;
+                    if (descendent < ancestor)
+                    {
+                        Trace.TraceError($"Release {descendent} descends from higher {ancestor}");
+                        passed = false;
+                    }
+                }
+            }
+
+            if (!passed)
+            {
+                throw new UserException("Incorrect release ordering");
             }
         }
 
