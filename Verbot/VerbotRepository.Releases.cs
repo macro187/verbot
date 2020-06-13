@@ -24,7 +24,7 @@ namespace Verbot
                     .Where(tag => tag.Version != null)
                     .Where(tag => tag.Version.Prerelease == "")
                     .Where(tag => tag.Version.Build == "")
-                    .Select(tag => new ReleaseInfo(this, tag.Version, GetCommit(tag.Ref.Target), tag.Ref))
+                    .Select(tag => new ReleaseInfo(this, tag.Version, tag.Ref))
                     .OrderBy(release => release.Version)
                     .ToList());
 
@@ -81,6 +81,13 @@ namespace Verbot
 
         public IEnumerable<GitRefWithRemote> FindReleaseTagsWithRemote() =>
             GetRemoteInfo(ReleasesDescending.Select(t => t.Tag)).ToList();
+
+
+        public ReleaseInfo FindPreviousReleaseAncestor(CommitInfo commit) =>
+            commit.CommitsSince(null)
+                .Reverse()
+                .Select(c => GetReleases(c).SingleOrDefault())
+                .FirstOrDefault(r => r != null);
 
     }
 }

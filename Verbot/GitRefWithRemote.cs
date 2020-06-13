@@ -5,20 +5,20 @@ namespace Verbot
     class GitRefWithRemote
     {
 
-        public GitRefWithRemote(GitRef @ref, GitSha1 remoteTarget)
+        public GitRefWithRemote(RefInfo @ref, GitSha1 remoteTargetSha1)
         {
             Ref = @ref;
-            RemoteTarget = remoteTarget;
+            RemoteTargetSha1 = remoteTargetSha1;
         }
 
 
-        public GitRef Ref { get; }
+        public RefInfo Ref { get; }
         public GitRefNameComponent Name => Ref.Name;
         public GitFullRefName FullName => Ref.FullName;
-        public GitSha1 Target => Ref.Target;
+        public CommitInfo Target => Ref.Target;
         public bool IsBranch => Ref.IsBranch;
         public bool IsTag => Ref.IsTag;
-        public GitSha1 RemoteTarget { get; }
+        public GitSha1 RemoteTargetSha1 { get; }
 
     }
 }

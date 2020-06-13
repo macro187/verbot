@@ -319,10 +319,10 @@ namespace Verbot
                     continue;
                 }
 
-                var correctSha1 = branchThatShouldExist.Release.Commit.Sha1;
-                if (branch.Target != correctSha1)
+                var correctCommit = branchThatShouldExist.Release.Commit;
+                if (branch.Target != correctCommit)
                 {
-                    Trace.TraceWarning($"{name} branch should be at commit {correctSha1}");
+                    Trace.TraceWarning($"{name} branch should be at commit {correctCommit.Sha1}");
                 }
             }
         }

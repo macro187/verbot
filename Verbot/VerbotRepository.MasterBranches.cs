@@ -11,79 +11,29 @@ namespace Verbot
 {
     partial class VerbotRepository
     {
-        
+
         IEnumerable<MasterBranchInfo> MasterBranchesCache;
+        IEnumerable<MasterBranchSpec> MasterBranchPointsCache;
 
 
-        /// <summary>
-        /// All 'master' and 'MAJOR.MINOR-master' branches, in decreasing order of tracked minor
-        /// version
-        /// </summary>
-        ///
         public IEnumerable<MasterBranchInfo> MasterBranches =>
             MasterBranchesCache ?? (MasterBranchesCache =
                 Branches
-                    .Select(b => (Ref: b, Version: GetMasterBranchVersion(b)))
-                    .Where(b => b.Version != null)
-                    .Select(b => new MasterBranchInfo(b.Ref, b.Version))
-                    .OrderByDescending(b => b.Version)
+                    .Select(b => (Ref: b, Series: CalculateMasterBranchSeries(b)))
+                    .Where(b => b.Series != null)
+                    .Select(b => new MasterBranchInfo(b.Ref, b.Series))
+                    .OrderByDescending(b => b.Series)
                     .ToList());
 
 
-        IEnumerable<GitRef> VerbotBranches =>
-            Branches
-                .Where(b =>
-                    GetMasterBranchVersion(b) != null ||
-                    b.Name == "latest" ||
-                    MajorLatestBranchInfo.IsMajorLatestBranchName(b.Name) ||
-                    MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name))
-                .ToList();
-
-
-        public IEnumerable<GitRefWithRemote> GetVerbotBranchesWithRemote() =>
-            GetRemoteInfo(VerbotBranches).ToList();
-
-
-        /// <summary>
-        /// Find information about all 'MAJOR-latest' branches, in decreasing version order
-        /// </summary>
-        ///
-        IList<MajorLatestBranchInfo> FindMajorLatestBranches()
-        {
-            return
-                GitRepository.GetBranches()
-                    .Where(b => MajorLatestBranchInfo.IsMajorLatestBranchName(b.Name))
-                    .Select(b => new MajorLatestBranchInfo(b))
-                    .OrderByDescending(b => b.Version)
-                    .ToList();
-        }
-
-
-        /// <summary>
-        /// Find information about all 'MAJOR.MINOR-latest' branches, in decreasing version order
-        /// </summary>
-        ///
-        IList<MajorMinorLatestBranchInfo> FindMajorMinorLatestBranches()
-        {
-            return
-                GitRepository.GetBranches()
-                    .Where(b => MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name))
-                    .Select(b => new MajorMinorLatestBranchInfo(b))
-                    .OrderByDescending(b => b.Version)
-                    .ToList();
-        }
-
-
-        SemVersion GetMasterBranchVersion(GitRef @ref)
+        SemVersion CalculateMasterBranchSeries(RefInfo @ref)
         {
             Guard.NotNull(@ref, nameof(@ref));
-            if (@ref.IsBranch) throw new ArgumentException("Not a branch", nameof(@ref));
+            if (!@ref.IsBranch) throw new ArgumentException("Not a branch", nameof(@ref));
 
             if (@ref.Name == "master")
             {
-                return
-                    CalculateReleaseVersion(GetCommit(@ref.Target))
-                        .Change(null, null, 0, "", "");
+                return GetCommitState(@ref.Target).ReleaseSeries;
             }
 
             var match = Regex.Match(@ref.Name, @"^(\d+)\.(\d+)-master$");
@@ -95,6 +45,58 @@ namespace Verbot
             }
 
             return null;
+        }
+
+
+        IEnumerable<MasterBranchSpec> MasterBranchPoints =>
+            MasterBranchPointsCache ?? (MasterBranchPointsCache = FindMasterBranchPoints());
+
+
+        IEnumerable<MasterBranchSpec> FindMasterBranchPoints()
+        {
+            foreach (var release in ReleasesAscending)
+            {
+                Analyze(release.Commit);
+            }
+
+            foreach (var branch in MasterBranches)
+            {
+                Analyze(branch.Target);
+            }
+
+            var latestCommitsInEachSeries =
+                CommitStates
+                    .GroupBy(commit => commit.ReleaseSeries)
+                    .Select(commits =>
+                        commits
+                            .OrderBy(commit => commit.Version)
+                            .Last())
+                    .OrderByDescending(commit => commit.ReleaseSeries)
+                    .ToList();
+
+            var latestSeriesLatestCommit =
+                latestCommitsInEachSeries.FirstOrDefault();
+
+            var otherLatestCommits =
+                latestCommitsInEachSeries.Skip(1);
+
+            if (latestSeriesLatestCommit != null)
+            {
+                yield return
+                    new MasterBranchSpec(
+                        latestSeriesLatestCommit.ReleaseSeries, 
+                        latestSeriesLatestCommit.Commit,
+                        new GitRefNameComponent("master"));
+            }
+
+            foreach (var commit in otherLatestCommits)
+            {
+                yield return
+                    new MasterBranchSpec(
+                        commit.ReleaseSeries, 
+                        commit.Commit,
+                        new GitRefNameComponent($"{commit.Major}.{commit.Minor}-master"));
+            }
         }
 
     }

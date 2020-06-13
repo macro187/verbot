@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -12,6 +13,7 @@ namespace Verbot
         readonly VerbotRepository VerbotRepository;
         readonly GitRepository GitRepository;
         string message;
+        DateTimeOffset? committerDate;
         bool? isBreaking;
         bool? isFeature;
 
@@ -31,48 +33,32 @@ namespace Verbot
         public GitSha1 Sha1 { get; }
 
 
-        public string Message
-        {
-            get
-            {
-                if (message == null)
-                {
-                    message = GitRepository.GetCommitMessage(Sha1);
-                }
+        public string Message =>
+            message ?? (message =
+                GitRepository.GetCommitMessage(Sha1));
+        
 
-                return message;
-            }
-        }
+        public DateTimeOffset CommitterDate =>
+            committerDate ?? (committerDate =
+                GitRepository.GetCommitterDate(Sha1)).Value;
 
 
-        public bool IsBreaking
-        {
-            get
-            {
-                if (isBreaking == null)
-                {
-                    var lines = StringExtensions.SplitLines(Message).Select(line => line.Trim());
-                    isBreaking = lines.Any(line => Regex.IsMatch(line, @"^\+semver:\s?(breaking|major)$"));
-                }
-
-                return isBreaking.Value;
-            }
-        }
+        public bool IsBreaking =>
+            isBreaking ?? (isBreaking =
+                StringExtensions.SplitLines(Message)
+                    .Select(line => line.Trim())
+                    .Any(line => Regex.IsMatch(line, @"^\+semver:\s?(breaking|major)$"))).Value;
 
 
-        public bool IsFeature
-        {
-            get
-            {
-                if (isFeature == null)
-                {
-                    var lines = StringExtensions.SplitLines(Message).Select(line => line.Trim());
-                    isFeature = lines.Any(line => Regex.IsMatch(line, @"^\+semver:\s?(feature|minor)$"));
-                }
+        public bool IsFeature =>
+            isFeature ?? (isFeature =
+                StringExtensions.SplitLines(Message)
+                    .Select(line => line.Trim())
+                    .Any(line => Regex.IsMatch(line, @"^\+semver:\s?(feature|minor)$"))).Value;
 
-                return isFeature.Value;
-            }
-        }
+
+        public GitShortSha1 GetShortSha1(int minimumLength) =>
+            GitRepository.GetShortCommitId(Sha1, minimumLength);
 
 
         public bool DescendsFrom(CommitInfo commit) =>

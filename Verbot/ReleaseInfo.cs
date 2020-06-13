@@ -10,7 +10,7 @@ namespace Verbot
     class ReleaseInfo
     {
 
-        public ReleaseInfo(VerbotRepository repository, SemVersion version, CommitInfo commit, GitRef tag)
+        public ReleaseInfo(VerbotRepository repository, SemVersion version, RefInfo tag)
         {
             Guard.NotNull(repository, nameof(repository));
             Guard.NotNull(tag, nameof(tag));
@@ -23,11 +23,10 @@ namespace Verbot
             {
                 throw new ArgumentException("Not a release version", nameof(version));
             }
-            Guard.NotNull(commit, nameof(commit));
 
             Repository = repository;
             Version = version;
-            Commit = commit;
+            Commit = tag.Target;
             Tag = tag;
         }
 
@@ -35,7 +34,7 @@ namespace Verbot
         VerbotRepository Repository { get; }
         public SemVersion Version { get; }
         public CommitInfo Commit { get; }
-        public GitRef Tag { get; }
+        public RefInfo Tag { get; }
 
 
         public bool IsMajor =>

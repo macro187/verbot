@@ -4,6 +4,10 @@ using System.Diagnostics;
 using MacroGit;
 using System;
 using MacroSemver;
+using System.Collections.Generic;
+using MacroGuards;
+using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace Verbot
 {
@@ -88,7 +92,7 @@ namespace Verbot
                 {
                     var newBranchVersion = currentMinorVersion;
 
-                    if (MasterBranches.Any(mb => mb.Name != "master" && mb.Version == newBranchVersion))
+                    if (MasterBranches.Any(mb => mb.Name != "master" && mb.Series == newBranchVersion))
                         throw new UserException(FormattableString.Invariant(
                             $"A -master branch tracking {newBranchVersion.Major}.{newBranchVersion.Minor} already exists"));
 
@@ -102,7 +106,7 @@ namespace Verbot
                 {
                     var newBranchVersion = nextMinorVersion;
 
-                    if (MasterBranches.Any(mb => mb.Version == newBranchVersion))
+                    if (MasterBranches.Any(mb => mb.Series == newBranchVersion))
                         throw new UserException(FormattableString.Invariant(
                             $"A master branch tracking {newBranchVersion.Major}.{newBranchVersion.Minor} already exists"));
 
@@ -137,8 +141,8 @@ namespace Verbot
             CheckForRemoteBranchesNotBehindLocal();
             CheckForIncorrectRemoteTags();
 
-            var branchesToPush = verbotBranchesWithRemote.Where(b => b.RemoteTarget != b.Target);
-            var tagsToPush = verbotTagsWithRemote.Where(b => b.RemoteTarget != b.Target);
+            var branchesToPush = verbotBranchesWithRemote.Where(b => b.RemoteTargetSha1 != b.Target.Sha1);
+            var tagsToPush = verbotTagsWithRemote.Where(b => b.RemoteTargetSha1 != b.Target.Sha1);
             var refsToPush = branchesToPush.Concat(tagsToPush);
 
             if (!refsToPush.Any())
@@ -262,7 +266,7 @@ namespace Verbot
             var minorVersion = ReadFromVersionLocations().Change(null, null, 0, "", "");
             var expectedCurrentBranch =
                 MasterBranches
-                    .Where(mb => mb.Version == minorVersion)
+                    .Where(mb => mb.Series == minorVersion)
                     .Select(mb => mb.Name)
                     .SingleOrDefault();
             if (expectedCurrentBranch == null)
@@ -295,7 +299,7 @@ namespace Verbot
         {
             if (!MasterBranches.Any()) return;
             var newMinorVersion = newVersion.Change(null, null, 0, "", "");
-            if (newMinorVersion > MasterBranches.First().Version && GitRepository.GetBranch() != "master")
+            if (newMinorVersion > MasterBranches.First().Series && GitRepository.GetBranch() != "master")
                 throw new UserException("Must be on master branch to advance to latest version");
         }
 
@@ -306,15 +310,15 @@ namespace Verbot
 
             var incorrectRemoteTags =
                 verbotTagsWithRemote
-                    .Where(t => t.RemoteTarget != null)
-                    .Where(t => t.RemoteTarget != t.Target)
+                    .Where(t => t.RemoteTargetSha1 != null)
+                    .Where(t => t.RemoteTargetSha1 != t.Target.Sha1)
                     .ToList();
 
             if (!incorrectRemoteTags.Any()) return;
 
             foreach (var tag in incorrectRemoteTags)
             {
-                Trace.TraceError($"Remote tag {tag.Name} at {tag.RemoteTarget} local {tag.Target}");
+                Trace.TraceError($"Remote tag {tag.Name} at {tag.RemoteTargetSha1} local {tag.Target.Sha1}");
             }
 
             throw new UserException("Incorrect remote tag(s) found");
@@ -327,15 +331,15 @@ namespace Verbot
 
             var remoteBranchesAtUnknownCommits =
                 verbotBranchesWithRemote
-                    .Where(b => b.RemoteTarget != null)
-                    .Where(b => !GitRepository.Exists(b.RemoteTarget))
+                    .Where(b => b.RemoteTargetSha1 != null)
+                    .Where(b => !GitRepository.Exists(b.RemoteTargetSha1))
                     .ToList();
 
             if (!remoteBranchesAtUnknownCommits.Any()) return;
 
             foreach (var branch in remoteBranchesAtUnknownCommits)
             {
-                Trace.TraceError($"Remote branch {branch.Name} at unknown commit {branch.RemoteTarget}");
+                Trace.TraceError($"Remote branch {branch.Name} at unknown commit {branch.RemoteTargetSha1}");
             }
 
             throw new UserException("Remote branch(es) at unknown commits");
@@ -348,8 +352,8 @@ namespace Verbot
 
             var remoteBranchesNotBehindLocal =
                 verbotBranchesWithRemote
-                    .Where(b => b.RemoteTarget != null)
-                    .Where(b => !GitRepository.IsAncestor(b.RemoteTarget, b.Target))
+                    .Where(b => b.RemoteTargetSha1 != null)
+                    .Where(b => !GitRepository.IsAncestor(b.RemoteTargetSha1, b.Target.Sha1))
                     .ToList();
 
             if (!remoteBranchesNotBehindLocal.Any()) return;
@@ -357,10 +361,54 @@ namespace Verbot
             foreach (var branch in remoteBranchesNotBehindLocal)
             {
                 Trace.TraceError(
-                    $"Remote branch {branch.Name} at {branch.RemoteTarget} not behind local at {branch.Target}");
+                    $"Remote branch {branch.Name} at {branch.RemoteTargetSha1} not behind local at {branch.Target.Sha1}");
             }
 
             throw new UserException("Remote branch(es) not behind local");
+        }
+
+
+        IEnumerable<RefInfo> VerbotBranches =>
+            Branches
+                .Where(b =>
+                    CalculateMasterBranchSeries(b) != null ||
+                    b.Name == "latest" ||
+                    MajorLatestBranchInfo.IsMajorLatestBranchName(b.Name) ||
+                    MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name))
+                .ToList();
+
+
+        public IEnumerable<GitRefWithRemote> GetVerbotBranchesWithRemote() =>
+            GetRemoteInfo(VerbotBranches).ToList();
+
+
+        /// <summary>
+        /// Find information about all 'MAJOR-latest' branches, in decreasing version order
+        /// </summary>
+        ///
+        IList<MajorLatestBranchInfo> FindMajorLatestBranches()
+        {
+            return
+                GitRepository.GetBranches()
+                    .Where(b => MajorLatestBranchInfo.IsMajorLatestBranchName(b.Name))
+                    .Select(b => new MajorLatestBranchInfo(b))
+                    .OrderByDescending(b => b.Version)
+                    .ToList();
+        }
+
+
+        /// <summary>
+        /// Find information about all 'MAJOR.MINOR-latest' branches, in decreasing version order
+        /// </summary>
+        ///
+        IList<MajorMinorLatestBranchInfo> FindMajorMinorLatestBranches()
+        {
+            return
+                GitRepository.GetBranches()
+                    .Where(b => MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name))
+                    .Select(b => new MajorMinorLatestBranchInfo(b))
+                    .OrderByDescending(b => b.Version)
+                    .ToList();
         }
 
     }
