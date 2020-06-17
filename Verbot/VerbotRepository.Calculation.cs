@@ -6,15 +6,15 @@ namespace Verbot
     {
 
         public SemVersion CalculateVersion() =>
-            CalculateVersion(GetHeadCommit());
+            CalculateVersion(Head.Target);
 
 
         public SemVersion CalculateReleaseVersion() =>
-            CalculateReleaseVersion(GetHeadCommit());
+            CalculateReleaseVersion(Head.Target);
 
 
         public SemVersion CalculatePrereleaseVersion() =>
-            CalculatePrereleaseVersion(GetHeadCommit());
+            CalculatePrereleaseVersion(Head.Target);
 
 
         public SemVersion CalculateVersion(CommitInfo commit) =>

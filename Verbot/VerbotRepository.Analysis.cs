@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using MacroGit;
 using MacroSemver;
 
 namespace Verbot
@@ -15,13 +16,13 @@ namespace Verbot
 
 
         public CommitState GetCommitState(CommitInfo commit) =>
-            CommitStateCache.ContainsKey(commit)
-                ? CommitStateCache[commit]
-                : Analyze(commit);
+            CommitStateCache.TryGetValue(commit, out var state)
+                ? state
+                : Analyze(commit.Sha1);
 
 
-        public CommitState Analyze(CommitInfo to) =>
-            to.CommitsSince(null)
+        public CommitState Analyze(GitSha1 to) =>
+            GetCommitsBetween(null, to) 
                 .Aggregate(
                     new CommitState()
                     {
@@ -56,11 +57,11 @@ namespace Verbot
                 CommitsSincePreviousRelease =
                     previousState.CommitsSincePreviousRelease + 1,
                 CommitterDatePrereleaseComponent =
-                    commit.CommitterDate
+                    commit.CommitDate
                         .ToUniversalTime()
                         .ToString("yyyyMMddTHHmmss"),
                 ShortSha1PrereleaseComponent =
-                    commit.GetShortSha1(4),
+                    commit.Sha1.ToString().Substring(0, 4),
                 Major =
                     previousState.Major,
                 Minor =

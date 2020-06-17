@@ -16,7 +16,7 @@ namespace Verbot
         public bool HasBeenBreakingSincePreviousRelease { get; set; }
         public int CommitsSincePreviousRelease { get; set; }
         public string CommitterDatePrereleaseComponent { get; set; } = "";
-        public GitShortSha1 ShortSha1PrereleaseComponent { get; set; }
+        public string ShortSha1PrereleaseComponent { get; set; }
         public int Major { get; set; }
         public int Minor { get; set; }
         public int Patch { get; set; }

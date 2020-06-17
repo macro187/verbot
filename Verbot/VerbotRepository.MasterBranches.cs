@@ -56,12 +56,12 @@ namespace Verbot
         {
             foreach (var release in ReleasesAscending)
             {
-                Analyze(release.Commit);
+                Analyze(release.Tag.TargetSha1);
             }
 
             foreach (var branch in MasterBranches)
             {
-                Analyze(branch.Target);
+                Analyze(branch.TargetSha1);
             }
 
             var latestCommitsInEachSeries =

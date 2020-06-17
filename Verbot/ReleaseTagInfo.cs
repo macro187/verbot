@@ -1,5 +1,4 @@
 using System;
-using MacroGit;
 using MacroGuards;
 using MacroSemver;
 

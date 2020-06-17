@@ -12,53 +12,37 @@ namespace Verbot
 
         readonly VerbotRepository VerbotRepository;
         readonly GitRepository GitRepository;
-        string message;
-        DateTimeOffset? committerDate;
-        bool? isBreaking;
-        bool? isFeature;
 
         
         /// <param name="sha1">
         /// Assumed to exist in <paramref name="gitRepository"/>
         /// </param>
         ///
-        public CommitInfo(VerbotRepository verbotRepository, GitRepository gitRepository, GitSha1 sha1)
+        public CommitInfo(VerbotRepository verbotRepository, GitRepository gitRepository, GitCommitInfo gitCommit)
         {
             VerbotRepository = verbotRepository;
             GitRepository = gitRepository;
-            Sha1 = sha1;
+            Sha1 = gitCommit.Sha1;
+            Author = gitCommit.Author;
+            AuthorDate = gitCommit.AuthorDate;
+            Committer = gitCommit.Committer;
+            CommitDate = gitCommit.CommitDate;
+            MessageLines = gitCommit.MessageLines;
+            Message = gitCommit.Message;
+            IsBreaking = MessageLines.Any(line => Regex.IsMatch(line.Trim(), @"^\+semver:\s?(breaking|major)$"));
+            IsFeature = MessageLines.Any(line => Regex.IsMatch(line.Trim(), @"^\+semver:\s?(feature|minor)$"));
         }
         
 
         public GitSha1 Sha1 { get; }
-
-
-        public string Message =>
-            message ?? (message =
-                GitRepository.GetCommitMessage(Sha1));
-        
-
-        public DateTimeOffset CommitterDate =>
-            committerDate ?? (committerDate =
-                GitRepository.GetCommitterDate(Sha1)).Value;
-
-
-        public bool IsBreaking =>
-            isBreaking ?? (isBreaking =
-                StringExtensions.SplitLines(Message)
-                    .Select(line => line.Trim())
-                    .Any(line => Regex.IsMatch(line, @"^\+semver:\s?(breaking|major)$"))).Value;
-
-
-        public bool IsFeature =>
-            isFeature ?? (isFeature =
-                StringExtensions.SplitLines(Message)
-                    .Select(line => line.Trim())
-                    .Any(line => Regex.IsMatch(line, @"^\+semver:\s?(feature|minor)$"))).Value;
-
-
-        public GitShortSha1 GetShortSha1(int minimumLength) =>
-            GitRepository.GetShortCommitId(Sha1, minimumLength);
+        public string Author { get; }
+        public DateTimeOffset AuthorDate { get; }
+        public string Committer { get; }
+        public DateTimeOffset CommitDate { get; }
+        public IReadOnlyList<string> MessageLines { get; }
+        public string Message { get; }
+        public bool IsBreaking { get; }
+        public bool IsFeature { get; }
 
 
         public bool DescendsFrom(CommitInfo commit) =>

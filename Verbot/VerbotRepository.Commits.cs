@@ -1,7 +1,7 @@
 using System.Linq;
 using MacroGit;
 using System.Collections.Generic;
-using System;
+using System.Diagnostics;
 
 namespace Verbot
 {
@@ -12,33 +12,46 @@ namespace Verbot
             new Dictionary<GitSha1, CommitInfo>();
 
 
-        IDictionary<(GitSha1 from, GitSha1 to), IList<CommitInfo>> CommitsBetweenCache =
-            new Dictionary<(GitSha1 from, GitSha1 to), IList<CommitInfo>>();
-
-
-        CommitInfo GetHeadCommit() =>
-            FindCommit(new GitRev("HEAD"))
-                ?? throw new InvalidOperationException("No HEAD commit");
-
-
-        CommitInfo FindCommit(GitRev rev) =>
-            GitRepository.TryGetCommitId(rev, out var sha1) ? GetCommit(sha1) : null;
+        IDictionary<(GitSha1 from, GitSha1 to), IReadOnlyList<CommitInfo>> CommitsBetweenCache =
+            new Dictionary<(GitSha1 from, GitSha1 to), IReadOnlyList<CommitInfo>>();
 
 
         public CommitInfo GetCommit(GitSha1 sha1) =>
-            CommitCache.ContainsKey(sha1)
-                ? CommitCache[sha1]
-                : CommitCache[sha1] = new CommitInfo(this, GitRepository, sha1);
+            CommitCache.TryGetValue(sha1, out var commits)
+                ? commits
+                : CommitCache[sha1] = GetCommits(sha1, 1).Single();
 
 
-        public IEnumerable<CommitInfo> GetCommits(IEnumerable<GitSha1> sha1s) =>
-            sha1s.Select(s => GetCommit(s));
+        //
+        // TODO
+        // Cache all subpaths too then preload tags and branches in descending alphabetical order to minimize the
+        // number of Git invocations required.
+        //
+        public IReadOnlyList<CommitInfo> GetCommitsBetween(GitSha1 from, GitSha1 to) =>
+            from == to
+                ? new List<CommitInfo>()
+                : CommitsBetweenCache.TryGetValue((from, to), out var commits)
+                    ? commits
+                    : CommitsBetweenCache[(from, to)] = GetCommits(RangeRev(from, to), -1).ToList();
 
 
-        public IList<CommitInfo> GetCommitsBetween(GitSha1 from, GitSha1 to) =>
-            CommitsBetweenCache.ContainsKey((from, to))
-                ? CommitsBetweenCache[(from, to)]
-                : CommitsBetweenCache[(from, to)] = GetCommits(GitRepository.ListCommits(from, to)).ToList();
-            
+        IEnumerable<CommitInfo> GetCommits(GitRev rev, int maxCount) =>
+            GitRepository.RevList(rev, maxCount)
+                .Select(gitCommit => GetCommit(gitCommit));
+
+
+        CommitInfo GetCommit(GitCommitInfo gitCommit) =>
+            CommitCache.TryGetValue(gitCommit.Sha1, out var commit)
+                ? commit
+                : CommitCache[gitCommit.Sha1] = new CommitInfo(this, GitRepository, gitCommit);
+
+
+        static GitRev RangeRev(GitRev from, GitRev to) =>
+            new GitRev(
+                string.Concat(
+                    from ?? "",
+                    from != null ? ".." : "",
+                    to));
+
     }
 }

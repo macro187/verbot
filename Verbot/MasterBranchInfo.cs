@@ -19,6 +19,7 @@ namespace Verbot
 
             Name = @ref.Name;
             FullName = @ref.FullName;
+            TargetSha1 = @ref.TargetSha1;
             Target = @ref.Target;
             Series = series;
         }
@@ -26,10 +27,11 @@ namespace Verbot
 
         public GitRefNameComponent Name { get; }
         public GitFullRefName FullName { get; }
-        public CommitInfo Target { get; }
         public bool IsBranch { get; }
         public bool IsTag { get; }
         public SemVersion Series { get; }
+        public GitSha1 TargetSha1 { get; }
+        public CommitInfo Target { get; }
 
     }
 }

@@ -7,7 +7,6 @@ using System.Reflection;
 using MacroIO;
 using MacroConsole;
 using MacroGit;
-using MacroSemver;
 using System.Linq;
 
 namespace Verbot

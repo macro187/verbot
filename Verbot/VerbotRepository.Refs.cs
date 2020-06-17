@@ -18,8 +18,12 @@ namespace Verbot
         public IEnumerable<RefInfo> Refs =>
             RefsCache ?? (RefsCache =
                 GitRepository.GetRefs()
-                    .Select(r => new RefInfo(r, GetCommit(r.Target)))
+                    .Select(r => new RefInfo(this, r))
                     .ToList());
+
+
+        public RefInfo Head =>
+            Refs.SingleOrDefault(r => r.FullName == "HEAD");
 
 
         public IEnumerable<RefInfo> Tags =>
