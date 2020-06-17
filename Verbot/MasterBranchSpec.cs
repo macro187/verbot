@@ -26,7 +26,7 @@ namespace Verbot
 
         public SemVersion Series { get; }
         public CommitInfo Commit { get; }
-        GitRefNameComponent Name { get; }
+        public GitRefNameComponent Name { get; }
 
     }
 }
