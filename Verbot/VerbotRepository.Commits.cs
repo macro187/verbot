@@ -32,7 +32,7 @@ namespace Verbot
                 ? new List<CommitInfo>()
                 : CommitsBetweenCache.TryGetValue((from, to), out var commits)
                     ? commits
-                    : CommitsBetweenCache[(from, to)] = GetCommits(RangeRev(from, to), -1).ToList();
+                    : CommitsBetweenCache[(from, to)] = GetCommits(RangeRev(from, to), -1).Reverse().ToList();
 
 
         IEnumerable<CommitInfo> GetCommits(GitRev rev, int maxCount) =>
