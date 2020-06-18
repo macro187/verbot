@@ -54,18 +54,23 @@ namespace Verbot
 
         IEnumerable<MasterBranchSpec> FindMasterBranchPoints()
         {
-            foreach (var release in ReleasesAscending)
+            var leaves =
+                ReleasesDescending
+                    .Select(r => r.Commit)
+                .Concat(MasterBranches
+                    .Select(b => b.Target))
+                .ToList();
+
+            foreach (var leaf in leaves)
             {
-                Analyze(release.Tag.TargetSha1);
+                Analyze(leaf.Sha1);
             }
 
-            foreach (var branch in MasterBranches)
-            {
-                Analyze(branch.TargetSha1);
-            }
+            var candidates = new HashSet<CommitInfo>(leaves.SelectMany(leaf => GetCommitsBetween(null, leaf.Sha1)));
+            var states = candidates.Select(c => GetCommitState(c)).ToList();
 
             var latestCommitsInEachSeries =
-                CommitStates
+                states
                     .GroupBy(commit => commit.ReleaseSeries)
                     .Select(commits =>
                         commits
