@@ -18,11 +18,11 @@ namespace Verbot
         public CommitState GetCommitState(CommitInfo commit) =>
             CommitStateCache.TryGetValue(commit, out var state)
                 ? state
-                : Analyze(commit.Sha1);
+                : Analyze(commit);
 
 
-        public CommitState Analyze(GitSha1 to) =>
-            GetCommitsBetween(null, to) 
+        public CommitState Analyze(CommitInfo to) =>
+            to.CommitsSince(null)
                 .Aggregate(
                     new CommitState()
                     {

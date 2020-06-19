@@ -1,7 +1,9 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using MacroGit;
-using System.Collections.Generic;
-using System.Diagnostics;
+using MacroCollections;
+using MacroGuards;
 
 namespace Verbot
 {
@@ -12,46 +14,68 @@ namespace Verbot
             new Dictionary<GitSha1, CommitInfo>();
 
 
-        IDictionary<(GitSha1 from, GitSha1 to), IReadOnlyList<CommitInfo>> CommitsBetweenCache =
-            new Dictionary<(GitSha1 from, GitSha1 to), IReadOnlyList<CommitInfo>>();
-
-
         public CommitInfo GetCommit(GitSha1 sha1) =>
-            CommitCache.TryGetValue(sha1, out var commits)
-                ? commits
-                : CommitCache[sha1] = GetCommits(sha1, 1).Single();
+            CommitCache.GetOrAdd(sha1, () =>
+                RevList(1, sha1).Single());
 
 
-        //
-        // TODO
-        // Cache all subpaths too then preload tags and branches in descending alphabetical order to minimize the
-        // number of Git invocations required.
-        //
-        public IReadOnlyList<CommitInfo> GetCommitsBetween(GitSha1 from, GitSha1 to) =>
-            from == to
-                ? new List<CommitInfo>()
-                : CommitsBetweenCache.TryGetValue((from, to), out var commits)
-                    ? commits
-                    : CommitsBetweenCache[(from, to)] = GetCommits(RangeRev(from, to), -1).Reverse().ToList();
+        public IEnumerable<CommitInfo> GetCommitsForward(CommitInfo from, CommitInfo to) =>
+            GetCommitsBackward(to, from).Reverse();
 
 
-        IEnumerable<CommitInfo> GetCommits(GitRev rev, int maxCount) =>
-            GitRepository.RevList(rev, maxCount)
-                .Select(gitCommit => GetCommit(gitCommit));
+        public IEnumerable<CommitInfo> GetCommitsBackward(CommitInfo from, CommitInfo to)
+        {
+            Guard.NotNull(from, nameof(from));
+
+            var commit = from;
+            while (true)
+            {
+                if (commit == to)
+                {
+                    break;
+                }
+
+                if (commit == null)
+                {
+                    throw new InvalidOperationException($"from {from.Sha1} does not descend from to {to.Sha1}");
+                }
+
+                yield return commit;
+
+                switch (commit.ParentSha1s.Count)
+                {
+                    case 1:
+                        var parentSha1 = commit.ParentSha1s.Single();
+                        if (!CommitCache.ContainsKey(parentSha1)) RevList(parentSha1);
+                        commit = GetCommit(parentSha1);
+                        break;
+                    case 0:
+                        commit = null;
+                        break;
+                    default:
+                        throw new NotSupportedException($"Merge commit not supported {commit.Sha1}");
+                }
+            }
+        }
 
 
-        CommitInfo GetCommit(GitCommitInfo gitCommit) =>
-            CommitCache.TryGetValue(gitCommit.Sha1, out var commit)
-                ? commit
-                : CommitCache[gitCommit.Sha1] = new CommitInfo(this, GitRepository, gitCommit);
+        IEnumerable<CommitInfo> RevList(GitRev rev) =>
+            RevList(-1, rev);
 
 
-        static GitRev RangeRev(GitRev from, GitRev to) =>
-            new GitRev(
-                string.Concat(
-                    from ?? "",
-                    from != null ? ".." : "",
-                    to));
+        IEnumerable<CommitInfo> RevList(int maxCount, GitRev rev) =>
+            RevList(maxCount, new[]{rev});
+
+
+        IEnumerable<CommitInfo> RevList(int maxCount, IEnumerable<GitRev> revs) =>
+            GitRepository.RevList(maxCount, revs)
+                .Select(gitCommit => GetOrAddCommit(gitCommit))
+                .ToList();
+
+
+        CommitInfo GetOrAddCommit(GitCommitInfo gitCommit) =>
+            CommitCache.GetOrAdd(gitCommit.Sha1, () =>
+                new CommitInfo(this, GitRepository, gitCommit));
 
     }
 }

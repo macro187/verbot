@@ -1,4 +1,3 @@
-using MacroGit;
 using MacroSemver;
 
 namespace Verbot

@@ -63,10 +63,10 @@ namespace Verbot
 
             foreach (var leaf in leaves)
             {
-                Analyze(leaf.Sha1);
+                Analyze(leaf);
             }
 
-            var candidates = new HashSet<CommitInfo>(leaves.SelectMany(leaf => GetCommitsBetween(null, leaf.Sha1)));
+            var candidates = new HashSet<CommitInfo>(leaves.SelectMany(leaf => leaf.CommitsSince(null)));
             var states = candidates.Select(c => GetCommitState(c)).ToList();
 
             var latestCommitsInEachSeries =

@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\MacroCollections\MacroCollections\MacroCollections.csproj" />
     <ProjectReference Include="..\..\MacroConsole\MacroConsole\MacroConsole.csproj" />
     <ProjectReference Include="..\..\MacroDiagnostics\MacroDiagnostics\MacroDiagnostics.csproj" />
     <ProjectReference Include="..\..\MacroExceptions\MacroExceptions\MacroExceptions.csproj" />
