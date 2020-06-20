@@ -13,7 +13,8 @@ namespace Verbot
     {
 
         IEnumerable<MasterBranchInfo> MasterBranchesCache;
-        IEnumerable<MasterBranchSpec> MasterBranchPointsCache;
+        IEnumerable<MasterBranchSpec> LatestMasterBranchPointsCache;
+        IReadOnlyDictionary<GitRefNameComponent, MasterBranchSpec> LatestMasterBranchPointsByNameCache;
 
 
         public IEnumerable<MasterBranchInfo> MasterBranches =>
@@ -26,33 +27,17 @@ namespace Verbot
                     .ToList());
 
 
-        SemVersion CalculateMasterBranchSeries(RefInfo @ref)
-        {
-            Guard.NotNull(@ref, nameof(@ref));
-            if (!@ref.IsBranch) throw new ArgumentException("Not a branch", nameof(@ref));
-
-            if (@ref.Name == "master")
-            {
-                return GetCommitState(@ref.Target).ReleaseSeries;
-            }
-
-            var match = Regex.Match(@ref.Name, @"^(\d+)\.(\d+)-master$");
-            if (match.Success)
-            {
-                return new SemVersion(
-                    int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture),
-                    int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture));
-            }
-
-            return null;
-        }
+        public IEnumerable<MasterBranchSpec> LatestMasterBranchPoints =>
+            LatestMasterBranchPointsCache ?? (LatestMasterBranchPointsCache =
+                FindLatestMasterBranchPoints());
 
 
-        IEnumerable<MasterBranchSpec> MasterBranchPoints =>
-            MasterBranchPointsCache ?? (MasterBranchPointsCache = FindMasterBranchPoints());
+        public IReadOnlyDictionary<GitRefNameComponent, MasterBranchSpec> LatestMasterBranchPointsByName =>
+            LatestMasterBranchPointsByNameCache ?? (LatestMasterBranchPointsByNameCache =
+                LatestMasterBranchPoints.ToDictionary(b => b.Name, b => b));
 
 
-        IEnumerable<MasterBranchSpec> FindMasterBranchPoints()
+        IEnumerable<MasterBranchSpec> FindLatestMasterBranchPoints()
         {
             var leaves =
                 ReleasesDescending
@@ -102,6 +87,28 @@ namespace Verbot
                         commit.Commit,
                         new GitRefNameComponent($"{commit.Major}.{commit.Minor}-master"));
             }
+        }
+
+
+        SemVersion CalculateMasterBranchSeries(RefInfo @ref)
+        {
+            Guard.NotNull(@ref, nameof(@ref));
+            if (!@ref.IsBranch) throw new ArgumentException("Not a branch", nameof(@ref));
+
+            if (@ref.Name == "master")
+            {
+                return GetCommitState(@ref.Target).ReleaseSeries;
+            }
+
+            var match = Regex.Match(@ref.Name, @"^(\d+)\.(\d+)-master$");
+            if (match.Success)
+            {
+                return new SemVersion(
+                    int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture),
+                    int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture));
+            }
+
+            return null;
         }
 
     }

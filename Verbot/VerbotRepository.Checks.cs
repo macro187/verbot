@@ -22,6 +22,9 @@ namespace Verbot
             CheckReleaseLineage();
             CheckReleaseSemverCommits();
             CheckLatestBranches();
+            CheckAllMasterBranchesExist();
+            CheckMasterBranchesInCorrectReleaseSeries();
+            CheckMasterBranchesNotBehind();
         }
 
 
@@ -324,6 +327,63 @@ namespace Verbot
                 {
                     Trace.TraceWarning($"{name} branch should be at commit {correctCommit.Sha1}");
                 }
+            }
+        }
+
+
+        void CheckAllMasterBranchesExist()
+        {
+            foreach (var spec in LatestMasterBranchPoints.OrderBy(spec => spec.Series))
+            {
+                if (!MasterBranches.Any(b => b.Name == spec.Name))
+                {
+                    Trace.TraceWarning($"Missing {spec.Name} branch");
+                }
+            }
+        }
+
+
+        void CheckMasterBranchesInCorrectReleaseSeries()
+        {
+            var passed = true;
+
+            foreach (var branch in MasterBranches)
+            {
+                var state = GetCommitState(branch.Target);
+                if (branch.Series != state.ReleaseSeries)
+                {
+                    Trace.TraceError($"{branch.Name} on incorrect release series {state.ReleaseSeries}");
+                    passed = false;
+                }
+            }
+
+            if (!passed)
+            {
+                throw new UserException("Master branch(es) on incorrect release series");
+            }
+        }
+
+
+        void CheckMasterBranchesNotBehind()
+        {
+            var passed = true;
+
+            foreach (var branch in MasterBranches)
+            {
+                var latestKnownPoint = LatestMasterBranchPointsByName[branch.Name];
+                if (!branch.Target.DescendsFrom(latestKnownPoint.Commit))
+                {
+                    var name = branch.Name;
+                    var series = $"{branch.Series.Major}.{branch.Series.Minor}";
+                    var latestSha1 = latestKnownPoint.Commit.Sha1;
+                    Trace.TraceError($"Branch {name} behind latest commit in {series} series {latestSha1}");
+                    passed = false;
+                }
+            }
+
+            if (!passed)
+            {
+                throw new UserException("Master branch(es) behind latest commit in release series");
             }
         }
 
