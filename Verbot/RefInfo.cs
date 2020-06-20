@@ -6,8 +6,8 @@ namespace Verbot
     class RefInfo
     {
 
-        readonly VerbotRepository verbotRepository;
-        CommitInfo target;
+        readonly VerbotRepository VerbotRepository;
+        readonly GitRef Ref;
 
 
         public RefInfo(VerbotRepository verbotRepository, GitRef @ref)
@@ -15,24 +15,17 @@ namespace Verbot
             Guard.NotNull(verbotRepository, nameof(verbotRepository));
             Guard.NotNull(@ref, nameof(@ref));
 
-            this.verbotRepository = verbotRepository;
-            Name = @ref.Name;
-            FullName = @ref.FullName;
-            IsBranch = @ref.IsBranch;
-            IsTag = @ref.IsTag;
-            TargetSha1 = @ref.Target;
+            VerbotRepository = verbotRepository;
+            Ref = @ref;
         }
         
 
-        public GitRefNameComponent Name { get; }
-        public GitFullRefName FullName { get; }
-        public bool IsBranch { get; }
-        public bool IsTag { get; }
-        public GitSha1 TargetSha1 { get; }
-
-
-        public CommitInfo Target =>
-            target ?? (target = verbotRepository.GetCommit(TargetSha1));
+        public GitRefNameComponent Name => Ref.Name;
+        public GitFullRefName FullName => Ref.FullName;
+        public bool IsBranch => Ref.IsBranch;
+        public bool IsTag => Ref.IsTag;
+        public GitSha1 TargetSha1 => Ref.Target;
+        public CommitInfo Target => VerbotRepository.GetCommit(TargetSha1);
 
     }
 }
