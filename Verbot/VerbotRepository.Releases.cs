@@ -84,7 +84,7 @@ namespace Verbot
 
 
         public ReleaseInfo FindPreviousReleaseAncestor(CommitInfo commit) =>
-            commit.CommitsSince(null)
+            commit.GetCommitsSince(null)
                 .Reverse()
                 .Select(c => GetReleases(c).SingleOrDefault())
                 .FirstOrDefault(r => r != null);

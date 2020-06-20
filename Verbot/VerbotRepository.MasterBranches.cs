@@ -51,7 +51,7 @@ namespace Verbot
                 Analyze(leaf);
             }
 
-            var candidates = new HashSet<CommitInfo>(leaves.SelectMany(leaf => leaf.CommitsSince(null)));
+            var candidates = new HashSet<CommitInfo>(leaves.SelectMany(leaf => leaf.GetCommitsSince(null)));
             var states = candidates.Select(c => GetCommitState(c)).ToList();
 
             var latestCommitsInEachSeries =

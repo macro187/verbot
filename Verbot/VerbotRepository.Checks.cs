@@ -15,10 +15,10 @@ namespace Verbot
             CheckForVersionLocations();
             CheckForConflictingVersions();
             CheckForMissingVersions();
-            CheckForReleaseZero();
-            CheckForMultipleReleasesFromSingleCommit();
-            CheckForMissingReleases();
-            CheckReleaseOrdering();
+            CheckNoReleaseZero();
+            CheckNoCommitsWithMultipleReleases();
+            CheckAllReleasesExist();
+            CheckReleasesInCorrectOrder();
             CheckReleaseLineage();
             CheckReleaseSemverCommits();
             CheckLatestBranches();
@@ -43,7 +43,7 @@ namespace Verbot
         }
 
 
-        void CheckForReleaseZero()
+        void CheckNoReleaseZero()
         {
             if (FindRelease(new SemVersion(0, 0, 0)) != null)
             {
@@ -52,7 +52,7 @@ namespace Verbot
         }
 
 
-        void CheckForMultipleReleasesFromSingleCommit()
+        void CheckNoCommitsWithMultipleReleases()
         {
             var passed = true;
 
@@ -74,13 +74,13 @@ namespace Verbot
         }
 
 
-        void CheckForMissingReleases()
+        void CheckAllReleasesExist()
         {
             var missingVersions =
                 Enumerable.Empty<SemVersion>()
-                    .Concat(CheckForMissingMajorReleases())
-                    .Concat(CheckForMissingMinorReleases())
-                    .Concat(CheckForMissingPatchReleases());
+                    .Concat(FindMissingMajorReleases())
+                    .Concat(FindMissingMinorReleases())
+                    .Concat(FindMissingPatchReleases());
 
             if (missingVersions.Any())
             {
@@ -94,7 +94,7 @@ namespace Verbot
         }
 
 
-        IEnumerable<SemVersion> CheckForMissingMajorReleases()
+        IEnumerable<SemVersion> FindMissingMajorReleases()
         {
             var latestRelease = ReleasesDescending.FirstOrDefault();
             if (latestRelease == null) yield break;
@@ -109,7 +109,7 @@ namespace Verbot
         }
 
 
-        IEnumerable<SemVersion> CheckForMissingMinorReleases()
+        IEnumerable<SemVersion> FindMissingMinorReleases()
         {
             foreach (var latestRelease in LatestMajorSeriesReleases)
             {
@@ -125,7 +125,7 @@ namespace Verbot
         }
 
 
-        IEnumerable<SemVersion> CheckForMissingPatchReleases()
+        IEnumerable<SemVersion> FindMissingPatchReleases()
         {
             foreach (var latestRelease in LatestMinorSeriesReleases)
             {
@@ -141,27 +141,18 @@ namespace Verbot
         }
 
 
-        void CheckReleaseOrdering()
+        void CheckReleasesInCorrectOrder()
         {
             var passed = true;
 
-            var memory = new HashSet<CommitInfo>();
-            bool Remember(CommitInfo commit) => !memory.Add(commit);
-
-            foreach (var startRelease in ReleasesDescending)
+            foreach (var release in ReleasesAscending)
             {
-                var descendent = startRelease.Version;
-                foreach (var commit in startRelease.CommitsSinceBeginning.Reverse().Skip(1))
+                var previousRelease = release.PreviousReleaseAncestor;
+                if (previousRelease == null) continue;
+                if (release.Version < previousRelease.Version)
                 {
-                    if (Remember(commit)) continue;
-                    var release = GetReleases(commit).SingleOrDefault();
-                    if (release == null) continue;
-                    var ancestor = release.Version;
-                    if (descendent < ancestor)
-                    {
-                        Trace.TraceError($"Release {descendent} descends from higher {ancestor}");
-                        passed = false;
-                    }
+                    Trace.TraceError($"Release {release.Version} descends from higher {previousRelease.Version}");
+                    passed = false;
                 }
             }
 
@@ -193,10 +184,10 @@ namespace Verbot
         bool CheckMajorReleaseLineage(ReleaseInfo release)
         {
             var version = release.Version;
-            if (release.PreviousMajor != null)
+            if (release.PreviousMajorRelease != null)
             {
-                var previousMajorVersion = release.PreviousMajor.Version;
-                if (!release.Commit.DescendsFrom(release.PreviousMajor.Commit))
+                var previousMajorVersion = release.PreviousMajorRelease.Version;
+                if (!release.Commit.IsDescendentOf(release.PreviousMajorRelease.Commit))
                 {
                     Trace.TraceError($"Release {version} does not descend from {previousMajorVersion}");
                     return false;
@@ -209,9 +200,9 @@ namespace Verbot
         bool CheckMinorReleaseLineage(ReleaseInfo release)
         {
             var version = release.Version;
-            if (!release.Commit.DescendsFrom(release.PreviousMinorNumeric.Commit))
+            if (!release.Commit.IsDescendentOf(release.PreviousMinorRelease.Commit))
             {
-                var previousMinorVersion = release.PreviousMinorNumeric.Version;
+                var previousMinorVersion = release.PreviousMinorRelease.Version;
                 Trace.TraceError($"Release {version} does not descend from {previousMinorVersion}");
                 return false;
             }
@@ -222,9 +213,9 @@ namespace Verbot
         bool CheckPatchReleaseLineage(ReleaseInfo release)
         {
             var version = release.Version;
-            if (!release.Commit.DescendsFrom(release.PreviousNumeric.Commit))
+            if (!release.Commit.IsDescendentOf(release.PreviousReleaseNumeric.Commit))
             {
-                var previousVersion = release.PreviousNumeric.Version;
+                var previousVersion = release.PreviousReleaseNumeric.Version;
                 Trace.TraceError($"Release {version} does not descend from {previousVersion}");
                 return false;
             }
@@ -255,10 +246,10 @@ namespace Verbot
         void CheckMajorReleaseSemverCommits(ReleaseInfo release)
         {
             var version = release.Version;
-            var breakingChange = release.CommitsSincePreviousAncestor.FirstOrDefault(c => c.IsBreaking);
+            var breakingChange = release.CommitsSincePreviousReleaseAncestor.FirstOrDefault(c => c.IsBreaking);
             if (breakingChange == null)
             {
-                var previousVersion = release.PreviousAncestor?.Version ?? "beginning";
+                var previousVersion = release.PreviousReleaseAncestor?.Version ?? "beginning";
                 Trace.TraceWarning($"No breaking change(s) between {previousVersion} and {version}");
             }
         }
@@ -268,19 +259,19 @@ namespace Verbot
         {
             var version = release.Version;
 
-            var breakingChange = release.CommitsSincePreviousAncestor.FirstOrDefault(c => c.IsBreaking);
+            var breakingChange = release.CommitsSincePreviousReleaseAncestor.FirstOrDefault(c => c.IsBreaking);
             if (breakingChange != null)
             {
-                var previousVersion = release.PreviousAncestor?.Version ?? "beginning";
+                var previousVersion = release.PreviousReleaseAncestor?.Version ?? "beginning";
                 Trace.TraceWarning($"Breaking change between {previousVersion} and {version}");
                 Trace.TraceWarning(breakingChange.Sha1);
                 Trace.TraceWarning(breakingChange.Message);
             }
 
-            var featureChange = release.CommitsSincePreviousAncestor.FirstOrDefault(c => c.IsFeature);
+            var featureChange = release.CommitsSincePreviousReleaseAncestor.FirstOrDefault(c => c.IsFeature);
             if (featureChange == null)
             {
-                var previousVersion = release.PreviousAncestor?.Version ?? "beginning";
+                var previousVersion = release.PreviousReleaseAncestor?.Version ?? "beginning";
                 Trace.TraceWarning($"No feature change(s) between {previousVersion} and {version}");
             }
         }
@@ -290,19 +281,19 @@ namespace Verbot
         {
             var version = release.Version;
 
-            var breakingChange = release.CommitsSincePreviousAncestor.FirstOrDefault(c => c.IsBreaking);
+            var breakingChange = release.CommitsSincePreviousReleaseAncestor.FirstOrDefault(c => c.IsBreaking);
             if (breakingChange != null)
             {
-                var previousVersion = release.PreviousAncestor?.Version ?? "beginning";
+                var previousVersion = release.PreviousReleaseAncestor?.Version ?? "beginning";
                 Trace.TraceWarning($"Breaking change between {previousVersion} and {version}");
                 Trace.TraceWarning(breakingChange.Sha1);
                 Trace.TraceWarning(breakingChange.Message);
             }
 
-            var featureChange = release.CommitsSincePreviousAncestor.FirstOrDefault(c => c.IsFeature);
+            var featureChange = release.CommitsSincePreviousReleaseAncestor.FirstOrDefault(c => c.IsFeature);
             if (featureChange != null)
             {
-                var previousVersion = release.PreviousAncestor?.Version ?? "beginning";
+                var previousVersion = release.PreviousReleaseAncestor?.Version ?? "beginning";
                 Trace.TraceWarning($"Feature change(s) between {previousVersion} and {version}");
                 Trace.TraceWarning(featureChange.Sha1);
                 Trace.TraceWarning(featureChange.Message);
@@ -371,7 +362,7 @@ namespace Verbot
             foreach (var branch in MasterBranches)
             {
                 var latestKnownPoint = LatestMasterBranchPointsByName[branch.Name];
-                if (!branch.Target.DescendsFrom(latestKnownPoint.Commit))
+                if (!branch.Target.IsDescendentOf(latestKnownPoint.Commit))
                 {
                     var name = branch.Name;
                     var series = $"{branch.Series.Major}.{branch.Series.Minor}";

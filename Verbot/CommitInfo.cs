@@ -40,12 +40,24 @@ namespace Verbot
         public string Message => GitCommit.Message;
 
 
-        public bool DescendsFrom(CommitInfo commit) =>
+        public bool IsDescendentOf(CommitInfo commit) =>
             GitRepository.IsAncestor(commit.Sha1, Sha1);
 
 
-        public IEnumerable<CommitInfo> CommitsSince(CommitInfo commit) =>
-            VerbotRepository.GetCommitsForward(commit, this);
+        public IEnumerable<CommitInfo> GetCommitsSinceBeginning() =>
+            GetCommitsSince(null);
+
+
+        public IEnumerable<CommitInfo> GetCommitsBackToBeginning() =>
+            GetCommitsBackTo(null);
+
+
+        public IEnumerable<CommitInfo> GetCommitsSince(CommitInfo from) =>
+            VerbotRepository.GetCommitsForward(from, this);
+
+
+        public IEnumerable<CommitInfo> GetCommitsBackTo(CommitInfo to) =>
+            VerbotRepository.GetCommitsBackward(this, to);
 
     }
 }

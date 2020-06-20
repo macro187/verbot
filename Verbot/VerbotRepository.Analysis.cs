@@ -22,7 +22,7 @@ namespace Verbot
 
 
         public CommitState Analyze(CommitInfo to) =>
-            to.CommitsSince(null)
+            to.GetCommitsSince(null)
                 .Aggregate(
                     new CommitState()
                     {
