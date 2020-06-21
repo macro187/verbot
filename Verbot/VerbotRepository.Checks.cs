@@ -15,6 +15,7 @@ namespace Verbot
             CheckForVersionLocations();
             CheckForConflictingVersions();
             CheckForMissingVersions();
+            CheckNoMergeCommits();
             CheckNoReleaseZero();
             CheckNoCommitsWithMultipleReleases();
             CheckAllReleasesExist();
@@ -40,6 +41,33 @@ namespace Verbot
         {
             if (GitRepository.HasUncommittedChanges())
                 throw new UserException("Uncommitted changes in repository");
+        }
+
+
+        void CheckNoMergeCommits()
+        {
+            bool passed = true;
+
+            var leaves =
+                ReleasesDescending.Select(r => r.Commit)
+                .Concat(MasterBranches.Select(b => b.Target));
+
+            foreach (var leaf in leaves)
+            {
+                foreach (var commit in leaf.GetCommitsBackToBeginning())
+                {
+                    if (commit.ParentSha1s.Count > 1)
+                    {
+                        Trace.TraceError($"Merge commit {commit.Sha1}");
+                        break;
+                    }
+                }
+            }
+
+            if (!passed)
+            {
+                throw new UserException($"Verbot does not support merge commits in release history");
+            }
         }
 
 
