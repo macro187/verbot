@@ -357,8 +357,6 @@ namespace Verbot
 
         void CheckMasterBranchesNotBehind()
         {
-            var passed = true;
-
             foreach (var branch in MasterBranches)
             {
                 var latestKnownPoint = LatestMasterBranchPointsByName[branch.Name];
@@ -367,14 +365,8 @@ namespace Verbot
                     var name = branch.Name;
                     var series = $"{branch.Series.Major}.{branch.Series.Minor}";
                     var latestSha1 = latestKnownPoint.Commit.Sha1;
-                    Trace.TraceError($"Branch {name} behind latest commit in {series} series {latestSha1}");
-                    passed = false;
+                    Trace.TraceWarning($"Branch {name} behind latest commit in {series} series {latestSha1}");
                 }
-            }
-
-            if (!passed)
-            {
-                throw new UserException("Master branch(es) behind latest commit in release series");
             }
         }
 
