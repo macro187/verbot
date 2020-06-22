@@ -10,8 +10,8 @@ Synopsis
 
     verbot [--verbose] <command> [options]
 
-		--verbose
-			Output informative details as operations are performed.
+        --verbose
+            Output informative details as operations are performed.
 
 
 
