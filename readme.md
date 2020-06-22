@@ -72,38 +72,6 @@ Commands
         Details on where version numbers are recorded in source code files can
         be found in the "Versions in Source Code" section.
 
-    increment --major
-    increment --minor
-    increment [--patch]
-        Increment to the next major, minor, or patch version
-
-        If incrementing --major or --minor, creates a 'MAJOR.MINOR-master'
-        branch for the current version before advancing (if on the master
-        branch) or creates and advances on a new 'MAJOR-MINOR-master' branch
-        for the new version (if on any other -master branch).
-
-        The operation fails if there are uncommitted changes in the
-        repository.
-
-        The operation fails if the current version is not a release version or
-        a -master version.
-
-        The operation fails if any 'MAJOR.MINOR-master' branch is tracking a
-        later version than 'master'.
-
-        The operation fails if the current branch is not the appropriate
-        'master' or 'MAJOR.MINOR-master' branch for the current version.
-
-        The operation fails if the current version appears unreleased and
-        incrementing it as directed would be unnecessary according to semver
-        semantics.
-
-        The operation fails if attempting to advance to the latest version
-        from a branch other than 'master'.
-
-        The operation fails if creating a new 'MAJOR.MINOR-master' branch is
-        necessary but such a branch already exists.
-
     release
         Release the version being developed on a master or -master branch
 

@@ -3,11 +3,7 @@ using MacroExceptions;
 using System.Diagnostics;
 using MacroGit;
 using System;
-using MacroSemver;
 using System.Collections.Generic;
-using MacroGuards;
-using System.Text.RegularExpressions;
-using System.Globalization;
 
 namespace Verbot
 {
@@ -29,7 +25,7 @@ namespace Verbot
             Trace.TraceInformation(FormattableString.Invariant($"Setting version to {version} and committing"));
             WriteToVersionLocations(version);
             GitRepository.StageChanges();
-            GitRepository.Commit(FormattableString.Invariant($"Release version {version.ToString()}"));
+            GitRepository.Commit(FormattableString.Invariant($"Release version {version}"));
 
             // Tag MAJOR.MINOR.PATCH
             Trace.TraceInformation("Tagging " + version.ToString());
@@ -63,70 +59,7 @@ namespace Verbot
             }
 
             // Increment to next patch version
-            IncrementVersion(false, false);
-        }
-
-
-        public void IncrementVersion(bool major, bool minor)
-        {
-            CheckLocal();
-
-            CheckNoUncommittedChanges();
-            CheckMasterBranchIsTrackingHighestVersion();
-            CheckVersionIsReleaseOrMasterPrerelease();
-            CheckOnCorrectMasterBranchForVersion();
-
-            var currentVersion = ReadFromVersionLocations();
-            var currentMinorVersion = currentVersion.Change(null, null, 0, "", "");
-            var currentBranch = GitRepository.GetBranch();
-            var onMaster = (currentBranch == "master");
-            var nextVersion = CalculateNextVersion(major, minor);
-            var nextMinorVersion = nextVersion.Change(null, null, 0, "", "");
-            CheckNotAdvancingToLatestVersionOnNonMasterBranch(nextVersion);
-            CheckNotSkippingRelease(major, minor);
-
-            // If incrementing major or minor, create and (if necessary) switch to new MAJOR.MINOR-master branch
-            if (major || minor)
-            {
-                if (onMaster)
-                {
-                    var newBranchVersion = currentMinorVersion;
-
-                    if (MasterBranches.Any(mb => mb.Name != "master" && mb.Series == newBranchVersion))
-                        throw new UserException(FormattableString.Invariant(
-                            $"A -master branch tracking {newBranchVersion.Major}.{newBranchVersion.Minor} already exists"));
-
-                    var newBranch =
-                        new GitRefNameComponent($"{newBranchVersion.Major}.{newBranchVersion.Minor}-master");
-
-                    Trace.TraceInformation("Creating branch " + newBranch);
-                    GitRepository.CreateBranch(newBranch);
-                }
-                else
-                {
-                    var newBranchVersion = nextMinorVersion;
-
-                    if (MasterBranches.Any(mb => mb.Series == newBranchVersion))
-                        throw new UserException(FormattableString.Invariant(
-                            $"A master branch tracking {newBranchVersion.Major}.{newBranchVersion.Minor} already exists"));
-
-                    var newBranch =
-                        new GitRefNameComponent($"{newBranchVersion.Major}.{newBranchVersion.Minor}-master");
-
-                    Trace.TraceInformation("Creating and switching to branch " + newBranch);
-                    GitRepository.CreateBranch(newBranch);
-                    GitRepository.Checkout(newBranch);
-                }
-            }
-
-            // Set version and commit
-            var incrementedComponent = major ? "major" : minor ? "minor" : "patch";
-            Trace.TraceInformation(FormattableString.Invariant(
-                $"Incrementing {incrementedComponent} version to {nextVersion} and committing"));
-            WriteToVersionLocations(nextVersion);
-            GitRepository.StageChanges();
-            GitRepository.Commit(
-                FormattableString.Invariant($"Increment {incrementedComponent} version to {nextVersion}"));
+            // IncrementVersion(false, false);
         }
 
 
@@ -152,19 +85,6 @@ namespace Verbot
             }
 
             GitRepository.Push(refsToPush.Select(r => r.FullName), dryRun: dryRun, echoOutput: true);
-        }
-
-
-        SemVersion CalculateNextVersion(bool major, bool minor)
-        {
-            var v = ReadFromVersionLocations().Change(null, null, null, "master", "");
-            return
-                major ?
-                    v.Change(v.Major + 1, 0, 0, null, null)
-                : minor ?
-                    v.Change(null, v.Minor + 1, 0, null, null)
-                :
-                    v.Change(null, null, v.Patch + 1, null, null);
         }
 
 
@@ -246,14 +166,6 @@ namespace Verbot
         }
 
 
-        void CheckVersionIsReleaseOrMasterPrerelease()
-        {
-            var version = ReadFromVersionLocations();
-            if (!(version.Prerelease == "" || version.Prerelease == "master"))
-                throw new UserException("Expected current version to be a release or -master prerelease");
-        }
-
-
         void CheckMasterBranchIsTrackingHighestVersion()
         {
             if (MasterBranches.Any(mb => mb.Name == "master") && MasterBranches.First().Name != "master")
@@ -273,34 +185,6 @@ namespace Verbot
                 throw new UserException("No master branch found for current version");
             if (GitRepository.GetBranch() != expectedCurrentBranch)
                 throw new UserException("Expected to be on branch " + expectedCurrentBranch);
-        }
-
-
-        void CheckNotSkippingRelease(bool major, bool minor)
-        {
-            var patch = !(major || minor);
-            var version = ReadFromVersionLocations();
-            if (version.Prerelease != "master") return;
-            var patchString = FormattableString.Invariant($"{version.Major}.{version.Minor}.{version.Patch}");
-            var minorString = FormattableString.Invariant($"{version.Major}.{version.Minor}");
-            if (patch)
-                throw new UserException(FormattableString.Invariant(
-                    $"No need to increment patch when {patchString} hasn't been released yet"));
-            if (minor && version.Patch == 0)
-                throw new UserException(FormattableString.Invariant(
-                    $"No need to increment minor when {patchString} hasn't been released yet"));
-            if (major && version.Minor == 0 && version.Patch == 0)
-                throw new UserException(FormattableString.Invariant(
-                    $"No need to increment major when {minorString} hasn't been released yet"));
-        }
-
-
-        void CheckNotAdvancingToLatestVersionOnNonMasterBranch(SemVersion newVersion)
-        {
-            if (!MasterBranches.Any()) return;
-            var newMinorVersion = newVersion.Change(null, null, 0, "", "");
-            if (newMinorVersion > MasterBranches.First().Series && GitRepository.GetBranch() != "master")
-                throw new UserException("Must be on master branch to advance to latest version");
         }
 
 

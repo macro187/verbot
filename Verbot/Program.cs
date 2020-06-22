@@ -70,8 +70,6 @@ namespace Verbot
                     return Read(args);
                 case "release":
                     return Release(args);
-                case "increment":
-                    return Increment(args);
                 case "push":
                     return Push(args);
                 case "check":
@@ -212,39 +210,6 @@ namespace Verbot
 
             var version = repository.ReadFromVersionLocations();
             Console.Out.WriteLine(version.ToString());
-            return 0;
-        }
-
-
-        static int Increment(Queue<string> args)
-        {
-            var repository = GetCurrentRepository();
-
-            bool major = false;
-            bool minor = false;
-            while (args.Count > 0)
-            {
-                var arg = args.Dequeue();
-                switch (arg)
-                {
-                    case "--major":
-                        major = true;
-                        minor = false;
-                        break;
-                    case "--minor":
-                        major = false;
-                        minor = true;
-                        break;
-                    case "--patch":
-                        major = false;
-                        minor = false;
-                        break;
-                    default:
-                        throw new UserException("Unrecognised argument: " + arg);
-                }
-            }
-
-            repository.IncrementVersion(major, minor);
             return 0;
         }
 
