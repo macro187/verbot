@@ -186,6 +186,22 @@ Master Branches
 
 
 
+Latest Branches
+===============
+
+    Latest branches track the latest releases overall and in each major and
+    minor release series.
+
+    The latest overall release is tracked by the "latest" branch.
+
+    The latest release in each major release series is tracked by a branch
+    following a "MAJOR-latest" pattern e.g. "2-latest".
+
+    The latest release in each minor release series is tracked by a branch
+    following a "MAJOR.MINOR-latest" pattern e.g. "2.3-latest".
+
+
+
 License
 =======
 
