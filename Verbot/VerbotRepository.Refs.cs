@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using MacroGit;
 using MacroSemver;
+using MacroCollections;
 
 namespace Verbot
 {
@@ -13,6 +14,7 @@ namespace Verbot
         IEnumerable<RefInfo> BranchesCache;
         IEnumerable<ReleaseTagInfo> ReleaseTagCache;
         ILookup<CommitInfo, ReleaseTagInfo> CommitReleaseTagLookupCache;
+        IDictionary<RefInfo, RefInfo> SymbolicRefTargets = new Dictionary<RefInfo, RefInfo>();
 
 
         public IEnumerable<RefInfo> Refs =>
@@ -24,6 +26,15 @@ namespace Verbot
 
         public RefInfo Head =>
             Refs.SingleOrDefault(r => r.FullName == "HEAD");
+
+
+        public RefInfo FindSymbolicRefTarget(RefInfo @ref) =>
+            SymbolicRefTargets.GetOrAdd(@ref, () =>
+            {
+                var name = GitRepository.FindSymbolicRefTarget(@ref.FullName);
+                if (name == null) return null;
+                return Refs.Where(r => r.FullName == name).SingleOrDefault();
+            });
 
 
         public IEnumerable<RefInfo> Tags =>

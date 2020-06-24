@@ -26,6 +26,7 @@ namespace Verbot
         public bool IsTag => Ref.IsTag;
         public GitSha1 TargetSha1 => Ref.Target;
         public CommitInfo Target => VerbotRepository.GetCommit(TargetSha1);
+        public RefInfo SymbolicTarget => VerbotRepository.FindSymbolicRefTarget(this);
 
     }
 }
