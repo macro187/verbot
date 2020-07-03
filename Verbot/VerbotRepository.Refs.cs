@@ -14,7 +14,7 @@ namespace Verbot
         IEnumerable<RefInfo> BranchesCache;
         IEnumerable<ReleaseTagInfo> ReleaseTagCache;
         ILookup<CommitInfo, ReleaseTagInfo> CommitReleaseTagLookupCache;
-        IDictionary<RefInfo, RefInfo> SymbolicRefTargets = new Dictionary<RefInfo, RefInfo>();
+        IDictionary<RefInfo, RefInfo> SymbolicRefTargetsCache = new Dictionary<RefInfo, RefInfo>();
 
 
         public IEnumerable<RefInfo> Refs =>
@@ -29,7 +29,7 @@ namespace Verbot
 
 
         public RefInfo FindSymbolicRefTarget(RefInfo @ref) =>
-            SymbolicRefTargets.GetOrAdd(@ref, () =>
+            SymbolicRefTargetsCache.GetOrAdd(@ref, () =>
             {
                 var name = GitRepository.FindSymbolicRefTarget(@ref.FullName);
                 if (name == null) return null;

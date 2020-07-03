@@ -111,5 +111,17 @@ namespace Verbot
             return null;
         }
 
+
+        GitRefNameComponent CalculateMasterBranchName(SemVersion version)
+        {
+            var series = version.Change(patch: 0, prerelease: "", build: "");
+            var latestSeries = LatestRelease?.Version?.Change(patch: 0);
+            var isLatest = latestSeries == null || series >= latestSeries;
+            return
+                isLatest
+                    ? new GitRefNameComponent("master")
+                    : new GitRefNameComponent($"{series.Major}.{series.Minor}-master");
+        }
+
     }
 }

@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using MacroExceptions;
+using MacroGit;
 using MacroSemver;
 
 namespace Verbot
@@ -34,6 +37,10 @@ namespace Verbot
                 ReleasesAscending.Reverse().ToList());
 
 
+        public ReleaseInfo LatestRelease =>
+            ReleasesDescending.FirstOrDefault();
+
+
         public IEnumerable<ReleaseInfo> MajorReleases =>
             ReleasesDescending.Where(r => r.IsMajor);
 
@@ -58,6 +65,83 @@ namespace Verbot
         IDictionary<SemVersion, ReleaseInfo> VersionReleaseLookup =>
             VersionReleaseLookupCache ?? (VersionReleaseLookupCache =
                 ReleasesDescending.ToDictionary(t => t.Version));
+
+
+        public void Release()
+        {
+            /*
+            var commit = Head.Target;
+            var state = GetCommitState(commit);
+
+            // Calculate release version X.Y.Z
+            var version = state.CalculatedReleaseVersion;
+
+            // Check: No releases on this commit != X.Y.Z
+            var areOtherReleasesOnCommit = GetReleases(commit).Any(r => r.Version != version);
+            if (areOtherReleasesOnCommit)
+            {
+                throw new UserException("HEAD already released as a different version");
+            }
+
+            // Check: X.Y.Z hasn't been released (from a different commit, if on same commit warn?)
+            var existingRelease = FindRelease(version);
+            if (existingRelease != null)
+            {
+                throw new UserException($"{version} already released at {existingRelease.Commit.Sha1}");
+            }
+
+            // Check: On correct [X.Y-]master branch
+            var masterBranchName = CalculateMasterBranchName(version);
+
+            // (more checks?)
+
+            // tag()
+            GitRepository.CreateTag(new GitRefNameComponent(version));
+
+            // if minor release
+            //   create/move X-latest branch
+            //   create/switchto [X.Y-]master branch
+            //   create/move previous [-]master branch to most recent branch point. HARD!
+            // create/move X.Y-latest branch
+            // if latest release in repo
+            //   create/move latest branch
+            // if --push git push tag and updated branches
+            // 
+
+            // This is getting hard and duplicates some check/repair logic. Maybe just always do a full pre-check before
+            // and repair after?  Wasn't the idea to be really strict anyways?  Yes but need repair command first.
+            */
+
+
+            /*
+            // TODO Basic checks
+
+            if (version != null)
+            {
+                Trace.TraceInformation($"Already released as {version}");
+            }
+            else
+            {
+                version = state.CalculatedReleaseVersion;
+                var existingRelease = FindRelease(version);
+                if (existingRelease != null)
+                {
+                    var existingSha1 = existingRelease.Commit.Sha1;
+                    throw new UserException($"Can't release {version} because it already exists at {existingSha1}");
+                }
+            }
+            */
+
+            var version = CalculateReleaseVersion();
+
+            if (FindRelease(version) != null)
+            {
+                throw new UserException($"Version {version} has already been released");
+            }
+
+            Trace.TraceInformation($"Tagging {version}");
+            GitRepository.CreateTag(new GitRefNameComponent(version));
+        }
 
 
         public ReleaseInfo GetRelease(SemVersion version) =>
