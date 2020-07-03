@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using MacroGit;
 using MacroSemver;
 
 namespace Verbot
@@ -15,13 +14,37 @@ namespace Verbot
             CommitStateCache.Values;
 
 
+        public SemVersion CalculateVersion() =>
+            GetVersion(Head.Target);
+
+
+        public SemVersion CalculateReleaseVersion() =>
+            GetReleaseVersion(Head.Target);
+
+
+        public SemVersion CalculatePrereleaseVersion() =>
+            GetPrereleaseVersion(Head.Target);
+
+
+        public SemVersion GetVersion(CommitInfo commit) =>
+            GetCommitState(commit).Version;
+
+
+        public SemVersion GetPrereleaseVersion(CommitInfo commit) =>
+            GetCommitState(commit).CalculatedPrereleaseVersion;
+
+
+        public SemVersion GetReleaseVersion(CommitInfo commit) =>
+            GetCommitState(commit).ReleaseVersion ?? GetCommitState(commit).CalculatedReleaseVersion;
+
+
         public CommitState GetCommitState(CommitInfo commit) =>
             CommitStateCache.TryGetValue(commit, out var state)
                 ? state
-                : Analyze(commit);
+                : CalculateCommitStatesTo(commit);
 
 
-        public CommitState Analyze(CommitInfo to) =>
+        public CommitState CalculateCommitStatesTo(CommitInfo to) =>
             to.GetCommitsSince(null)
                 .Aggregate(
                     new CommitState()
@@ -31,10 +54,10 @@ namespace Verbot
                     (previousState, commit) => 
                         CommitStateCache.ContainsKey(commit)
                             ? CommitStateCache[commit]
-                            : CommitStateCache[commit] = Analyze(commit, previousState));
+                            : CommitStateCache[commit] = CalculateCommitState(commit, previousState));
 
 
-        CommitState Analyze(CommitInfo commit, CommitState previousState)
+        CommitState CalculateCommitState(CommitInfo commit, CommitState previousState)
         {
             var state = new CommitState
             {

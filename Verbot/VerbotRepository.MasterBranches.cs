@@ -48,7 +48,7 @@ namespace Verbot
 
             foreach (var leaf in leaves)
             {
-                Analyze(leaf);
+                CalculateCommitStatesTo(leaf);
             }
 
             var candidates = new HashSet<CommitInfo>(leaves.SelectMany(leaf => leaf.GetCommitsSince(null)));
