@@ -12,9 +12,9 @@ namespace Verbot
 
         public void CheckLocal()
         {
-            CheckForVersionLocations();
-            CheckForConflictingVersions();
-            CheckForMissingVersions();
+            CheckForVersionLocationsOnDisk();
+            CheckNoConflictingVersionsOnDisk();
+            CheckNoMissingVersionsOnDisk();
             CheckNoMergeCommits();
             CheckNoReleaseZero();
             CheckNoCommitsWithMultipleReleases();

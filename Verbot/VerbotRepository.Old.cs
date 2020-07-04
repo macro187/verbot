@@ -2,66 +2,12 @@ using System.Linq;
 using MacroExceptions;
 using System.Diagnostics;
 using MacroGit;
-using System;
 using System.Collections.Generic;
 
 namespace Verbot
 {
     partial class VerbotRepository
     {
-
-        void OldRelease()
-        {
-            CheckLocal();
-
-            CheckNoUncommittedChanges();
-            CheckMasterBranchIsTrackingHighestVersion();
-            CheckVersionIsMasterPrerelease();
-            CheckOnCorrectMasterBranchForVersion();
-            CheckVersionHasNotBeenReleased();
-
-            // Set release version and commit
-            var version = ReadFromVersionLocations().Change(null, null, null, "", "");
-            Trace.TraceInformation(FormattableString.Invariant($"Setting version to {version} and committing"));
-            WriteToVersionLocations(version);
-            GitRepository.StageChanges();
-            GitRepository.Commit(FormattableString.Invariant($"Release version {version}"));
-
-            // Tag MAJOR.MINOR.PATCH
-            Trace.TraceInformation("Tagging " + version.ToString());
-            GitRepository.CreateTag(new GitRefNameComponent(version.ToString()));
-
-            // Set MAJOR.MINOR-latest branch
-            var majorMinorLatestBranch = new GitRefNameComponent($"{version.Major}.{version.Minor}-latest");
-            Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorMinorLatestBranch}"));
-            GitRepository.CreateOrMoveBranch(majorMinorLatestBranch);
-
-            // Set MAJOR-latest branch
-            var minorVersion = version.Change(null, null, 0, "", "");
-            var latestMajorMinorLatestBranch =
-                FindMajorMinorLatestBranches().Where(b => b.Version.Major == version.Major).First();
-            var isLatestMajorMinorLatestBranch = minorVersion >= latestMajorMinorLatestBranch.Version;
-            if (isLatestMajorMinorLatestBranch)
-            {
-                var majorLatestBranch = new GitRefNameComponent(FormattableString.Invariant($"{version.Major}-latest"));
-                Trace.TraceInformation(FormattableString.Invariant($"Setting branch {majorLatestBranch}"));
-                GitRepository.CreateOrMoveBranch(majorLatestBranch);
-            }
-
-            // Set latest branch
-            var majorVersion = version.Change(null, 0, 0, "", "");
-            var latestMajorLatestBranch = FindMajorLatestBranches().First();
-            var isLatestMajorLatestBranch = majorVersion >= latestMajorLatestBranch.Version;
-            if (isLatestMajorMinorLatestBranch && isLatestMajorLatestBranch)
-            {
-                Trace.TraceInformation(FormattableString.Invariant($"Setting branch latest"));
-                GitRepository.CreateOrMoveBranch(new GitRefNameComponent("latest"));
-            }
-
-            // Increment to next patch version
-            // IncrementVersion(false, false);
-        }
-
 
         public void Push(bool dryRun)
         {
@@ -88,9 +34,9 @@ namespace Verbot
         }
 
 
-        void CheckForVersionLocations()
+        void CheckForVersionLocationsOnDisk()
         {
-            var locations = FindVersionLocations();
+            var locations = FindOnDiskLocations();
 
             if (locations.Count == 0)
             {
@@ -99,13 +45,13 @@ namespace Verbot
         }
 
 
-        void CheckForConflictingVersions()
+        void CheckNoConflictingVersionsOnDisk()
         {
-            var locations = FindVersionLocations();
+            var locations = FindOnDiskLocations();
 
             var distinctVersions =
                 locations
-                    .Select(location => location.GetVersion())
+                    .Select(location => location.Read())
                     .Where(version => version != null)
                     .Distinct()
                     .ToList();
@@ -118,7 +64,7 @@ namespace Verbot
             Trace.TraceError("Conflicting versions found in repository:");
             foreach (var location in locations)
             {
-                var version = location.GetVersion() ?? "(none)";
+                var version = location.Read() ?? "(none)";
                 var description = location.Description;
                 Trace.TraceError($"  {version} in {description}");
             }
@@ -128,12 +74,12 @@ namespace Verbot
         }
 
 
-        void CheckForMissingVersions()
+        void CheckNoMissingVersionsOnDisk()
         {
-            var locations = FindVersionLocations();
+            var locations = FindOnDiskLocations();
             var missingLocations =
                 locations
-                    .Where(location => location.GetVersion() == null)
+                    .Where(location => location.Read() == null)
                     .ToList();
 
             if (missingLocations.Count == 0)
@@ -147,44 +93,6 @@ namespace Verbot
                 Trace.TraceWarning($"  {location.Description}");
             }
             Trace.TraceWarning("Consider re-setting the current version using the 'set' command.");
-        }
-
-
-        void CheckVersionHasNotBeenReleased()
-        {
-            var releaseVersion = ReadFromVersionLocations().Change(null, null, null, "", "");
-            if (GitRepository.GetTags().Any(t => t.Name == releaseVersion))
-                throw new UserException("Current version has already been released");
-        }
-
-
-        void CheckVersionIsMasterPrerelease()
-        {
-            var version = ReadFromVersionLocations();
-            if (version.Prerelease != "master")
-                throw new UserException("Expected current version to be a -master prerelease");
-        }
-
-
-        void CheckMasterBranchIsTrackingHighestVersion()
-        {
-            if (MasterBranches.Any(mb => mb.Name == "master") && MasterBranches.First().Name != "master")
-                throw new UserException("Expected master branch to be tracking the latest version");
-        }
-
-
-        void CheckOnCorrectMasterBranchForVersion()
-        {
-            var minorVersion = ReadFromVersionLocations().Change(null, null, 0, "", "");
-            var expectedCurrentBranch =
-                MasterBranches
-                    .Where(mb => mb.Series == minorVersion)
-                    .Select(mb => mb.Name)
-                    .SingleOrDefault();
-            if (expectedCurrentBranch == null)
-                throw new UserException("No master branch found for current version");
-            if (GitRepository.GetBranch() != expectedCurrentBranch)
-                throw new UserException("Expected to be on branch " + expectedCurrentBranch);
         }
 
 
@@ -264,36 +172,6 @@ namespace Verbot
 
         public IEnumerable<GitRefWithRemote> GetVerbotBranchesWithRemote() =>
             GetRemoteInfo(VerbotBranches).ToList();
-
-
-        /// <summary>
-        /// Find information about all 'MAJOR-latest' branches, in decreasing version order
-        /// </summary>
-        ///
-        IList<MajorLatestBranchInfo> FindMajorLatestBranches()
-        {
-            return
-                GitRepository.GetBranches()
-                    .Where(b => MajorLatestBranchInfo.IsMajorLatestBranchName(b.Name))
-                    .Select(b => new MajorLatestBranchInfo(b))
-                    .OrderByDescending(b => b.Version)
-                    .ToList();
-        }
-
-
-        /// <summary>
-        /// Find information about all 'MAJOR.MINOR-latest' branches, in decreasing version order
-        /// </summary>
-        ///
-        IList<MajorMinorLatestBranchInfo> FindMajorMinorLatestBranches()
-        {
-            return
-                GitRepository.GetBranches()
-                    .Where(b => MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name))
-                    .Select(b => new MajorMinorLatestBranchInfo(b))
-                    .OrderByDescending(b => b.Version)
-                    .ToList();
-        }
 
     }
 }

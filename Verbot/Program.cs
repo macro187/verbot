@@ -208,8 +208,8 @@ namespace Verbot
                 throw new UserException("Unexpected arguments");
             }
 
-            var version = repository.ReadFromVersionLocations();
-            Console.Out.WriteLine(version.ToString());
+            var version = repository.ReadVersion();
+            Console.Out.WriteLine(version);
             return 0;
         }
 
