@@ -10,15 +10,15 @@ namespace Verbot
     {
 
         public SemVersion WriteVersion() =>
-            WriteVersion(CalculateVersion());
+            WriteVersion(Calculate(Head.Target).Version);
 
           
         public SemVersion WriteReleaseVersion() =>
-            WriteVersion(CalculateReleaseVersion());
+            WriteVersion(Calculate(Head.Target).CalculatedReleaseVersion);
 
 
         public SemVersion WritePrereleaseVersion() =>
-            WriteVersion(CalculatePrereleaseVersion());
+            WriteVersion(Calculate(Head.Target).CalculatedPrereleaseVersion);
 
 
         public SemVersion WriteDefaultVersion() =>

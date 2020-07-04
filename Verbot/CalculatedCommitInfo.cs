@@ -2,7 +2,7 @@ using MacroSemver;
 
 namespace Verbot
 {
-    class CommitState
+    class CalculatedCommitInfo
     {
 
         public CommitInfo Commit { get; set; }
@@ -23,7 +23,7 @@ namespace Verbot
         public string Build { get; set; } = "";
         public SemVersion CalculatedPrereleaseVersion { get; set; }
         public SemVersion CalculatedReleaseVersion { get; set; }
-        public SemVersion ReleaseVersion { get; set; }
+        public SemVersion TaggedReleaseVersion { get; set; }
         public SemVersion Version { get; set; }
         public SemVersion ReleaseSeries => Version?.Change(patch: 0, prerelease: "", build: "");
 

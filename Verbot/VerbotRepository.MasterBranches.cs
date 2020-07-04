@@ -48,11 +48,11 @@ namespace Verbot
 
             foreach (var leaf in leaves)
             {
-                CalculateCommitStatesTo(leaf);
+                CalculateTo(leaf);
             }
 
             var candidates = new HashSet<CommitInfo>(leaves.SelectMany(leaf => leaf.GetCommitsSince(null)));
-            var states = candidates.Select(c => GetCommitState(c)).ToList();
+            var states = candidates.Select(c => Calculate(c)).ToList();
 
             var latestCommitsInEachSeries =
                 states
@@ -97,7 +97,7 @@ namespace Verbot
 
             if (@ref.Name == "master")
             {
-                return GetCommitState(@ref.Target).ReleaseSeries;
+                return Calculate(@ref.Target).ReleaseSeries;
             }
 
             var match = Regex.Match(@ref.Name, @"^(\d+)\.(\d+)-master$");

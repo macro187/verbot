@@ -368,7 +368,7 @@ namespace Verbot
 
             foreach (var branch in MasterBranches)
             {
-                var state = GetCommitState(branch.Target);
+                var state = Calculate(branch.Target);
                 if (branch.Series != state.ReleaseSeries)
                 {
                     Trace.TraceError($"{branch.Name} on incorrect release series {state.ReleaseSeries}");

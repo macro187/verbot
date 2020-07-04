@@ -132,7 +132,7 @@ namespace Verbot
             }
             */
 
-            var version = CalculateReleaseVersion();
+            var version = Calculate(Head.Target).CalculatedReleaseVersion;
 
             if (FindRelease(version) != null)
             {

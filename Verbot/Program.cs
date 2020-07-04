@@ -134,14 +134,16 @@ namespace Verbot
                 throw new UserException("Can't calculate --release and --prerelease version at the same time");
             }
 
+            var calculatedInfo = repository.Calculate(repository.Head.Target);
+
             var version =
                 release
-                    ? repository.CalculateReleaseVersion()
+                    ? calculatedInfo.CalculatedReleaseVersion
                 : prerelease
-                    ? repository.CalculatePrereleaseVersion()
-                    : repository.CalculateVersion();
+                    ? calculatedInfo.CalculatedPrereleaseVersion
+                : calculatedInfo.Version;
 
-            Console.Out.WriteLine(version.ToString());
+            Console.Out.WriteLine(version);
             return 0;
         }
 

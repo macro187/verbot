@@ -7,59 +7,32 @@ namespace Verbot
     partial class VerbotRepository
     {
 
-        IDictionary<CommitInfo, CommitState> CommitStateCache = new Dictionary<CommitInfo, CommitState>();
+        IDictionary<CommitInfo, CalculatedCommitInfo> CalculatedCommitInfoCache =
+            new Dictionary<CommitInfo, CalculatedCommitInfo>();
 
 
-        public IEnumerable<CommitState> CommitStates =>
-            CommitStateCache.Values;
-
-
-        public SemVersion CalculateVersion() =>
-            GetVersion(Head.Target);
-
-
-        public SemVersion CalculateReleaseVersion() =>
-            GetReleaseVersion(Head.Target);
-
-
-        public SemVersion CalculatePrereleaseVersion() =>
-            GetPrereleaseVersion(Head.Target);
-
-
-        public SemVersion GetVersion(CommitInfo commit) =>
-            GetCommitState(commit).Version;
-
-
-        public SemVersion GetPrereleaseVersion(CommitInfo commit) =>
-            GetCommitState(commit).CalculatedPrereleaseVersion;
-
-
-        public SemVersion GetReleaseVersion(CommitInfo commit) =>
-            GetCommitState(commit).ReleaseVersion ?? GetCommitState(commit).CalculatedReleaseVersion;
-
-
-        public CommitState GetCommitState(CommitInfo commit) =>
-            CommitStateCache.TryGetValue(commit, out var state)
+        public CalculatedCommitInfo Calculate(CommitInfo commit) =>
+            CalculatedCommitInfoCache.TryGetValue(commit, out var state)
                 ? state
-                : CalculateCommitStatesTo(commit);
+                : CalculateTo(commit);
 
 
-        public CommitState CalculateCommitStatesTo(CommitInfo to) =>
+        CalculatedCommitInfo CalculateTo(CommitInfo to) =>
             to.GetCommitsSince(null)
                 .Aggregate(
-                    new CommitState()
+                    new CalculatedCommitInfo()
                     {
                         Minor = 1,
                     },
                     (previousState, commit) => 
-                        CommitStateCache.ContainsKey(commit)
-                            ? CommitStateCache[commit]
-                            : CommitStateCache[commit] = CalculateCommitState(commit, previousState));
+                        CalculatedCommitInfoCache.ContainsKey(commit)
+                            ? CalculatedCommitInfoCache[commit]
+                            : CalculatedCommitInfoCache[commit] = Calculate(commit, previousState));
 
 
-        CommitState CalculateCommitState(CommitInfo commit, CommitState previousState)
+        CalculatedCommitInfo Calculate(CommitInfo commit, CalculatedCommitInfo previousState)
         {
-            var state = new CommitState
+            var state = new CalculatedCommitInfo
             {
                 Commit =
                     commit,
@@ -96,7 +69,7 @@ namespace Verbot
             //
             // Advance after a release
             //
-            if (previousState.ReleaseVersion != null)
+            if (previousState.TaggedReleaseVersion != null)
             {
                 state.Patch++;
                 state.CommitsSincePreviousRelease = 1;
@@ -140,17 +113,17 @@ namespace Verbot
             //
             if (state.ReleaseTag != null)
             {
-                state.ReleaseVersion = state.ReleaseTag.Version;
-                state.Major = state.ReleaseVersion.Major;
-                state.Minor = state.ReleaseVersion.Minor;
-                state.Patch = state.ReleaseVersion.Patch;
+                state.TaggedReleaseVersion = state.ReleaseTag.Version;
+                state.Major = state.TaggedReleaseVersion.Major;
+                state.Minor = state.TaggedReleaseVersion.Minor;
+                state.Patch = state.TaggedReleaseVersion.Patch;
                 state.Prerelease = "";
             }
 
             //
             // Final version
             //
-            state.Version = state.ReleaseVersion ?? state.CalculatedPrereleaseVersion;
+            state.Version = state.TaggedReleaseVersion ?? state.CalculatedPrereleaseVersion;
 
             return state;
         }
