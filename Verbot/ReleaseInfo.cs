@@ -40,7 +40,6 @@ namespace Verbot
         public bool IsMajor => Version.Minor == 0 && Version.Patch == 0;
         public bool IsMinor => Version.Minor > 0 && Version.Patch == 0;
         public bool IsPatch => Version.Patch > 0;
-        public bool IsMajorOrMinor => Version.Patch == 0;
 
 
         public ReleaseInfo PreviousNumericRelease =>
@@ -68,7 +67,7 @@ namespace Verbot
         public ReleaseInfo PreviousNumericMajorOrMinorRelease =>
             Repository.ReleasesDescending
                 .Where(r => r.Version < Version)
-                .Where(r => r.IsMajorOrMinor)
+                .Where(r => r.IsMajor || r.IsMinor)
                 .FirstOrDefault();
 
 

@@ -53,10 +53,6 @@ namespace Verbot
             ReleasesDescending.Where(r => r.IsPatch);
 
         
-        public IEnumerable<ReleaseInfo> MajorOrMinorReleases =>
-            ReleasesDescending.Where(r => r.IsMajorOrMinor);
-
-
         public IEnumerable<ReleaseInfo> LatestMajorSeriesReleases =>
             ReleasesAscending
                 .GroupBy(r => r.Version.Change(minor: 0, patch: 0))

@@ -17,8 +17,12 @@ namespace Verbot
             CheckNoCommitsWithMultipleReleases();
             CheckAllReleasesExist();
             CheckReleasesInCorrectOrder();
-            CheckReleaseLineage();
-            CheckReleaseSemverCommits();
+            CheckMajorReleaseLineage();
+            CheckMinorReleaseLineage();
+            CheckPatchReleaseLineage();
+            CheckMajorReleaseSemverCommits();
+            CheckMinorReleaseSemverCommits();
+            CheckPatchReleaseSemverCommits();
             CheckLatestBranches();
             CheckAllMasterBranchesExist();
             CheckMasterBranchesInCorrectReleaseSeries();
@@ -188,20 +192,29 @@ namespace Verbot
         }
 
 
-        void CheckReleaseLineage()
+        void CheckMajorReleaseLineage()
         {
-            var passed =
-                ReleasesAscending.Aggregate(true, (result, release) =>
-                    result &=
-                        release.IsMajor
-                            ? CheckMajorReleaseLineage(release)
-                        : release.IsMajorOrMinor
-                            ? CheckMinorReleaseLineage(release)
-                        : CheckPatchReleaseLineage(release));
-
-            if (!passed)
+            if (!MajorReleases.All(r => CheckMajorReleaseLineage(r)))
             {
-                throw new UserException("Invalid release lineage");
+                throw new UserException("Invalid major release lineage");
+            }
+        }
+
+
+        void CheckMinorReleaseLineage()
+        {
+            if (!MinorReleases.All(r => CheckMinorReleaseLineage(r)))
+            {
+                throw new UserException("Invalid minor release lineage");
+            }
+        }
+
+
+        void CheckPatchReleaseLineage()
+        {
+            if (!PatchReleases.All(r => CheckPatchReleaseLineage(r)))
+            {
+                throw new UserException("Invalid patch release lineage");
             }
         }
 
@@ -227,8 +240,8 @@ namespace Verbot
             var version = release.Version;
             if (!release.Commit.IsDescendentOf(release.PreviousNumericMajorOrMinorRelease.Commit))
             {
-                var previousMinorVersion = release.PreviousNumericMajorOrMinorRelease.Version;
-                Trace.TraceError($"Release {version} does not descend from {previousMinorVersion}");
+                var previousMajorOrMinorVersion = release.PreviousNumericMajorOrMinorRelease.Version;
+                Trace.TraceError($"Release {version} does not descend from {previousMajorOrMinorVersion}");
                 return false;
             }
             return true;
@@ -248,22 +261,29 @@ namespace Verbot
         }
 
 
-        void CheckReleaseSemverCommits()
+        void CheckMajorReleaseSemverCommits()
         {
-            foreach (var release in ReleasesAscending)
+            foreach (var release in MajorReleases)
             {
-                if (release.IsMajor)
-                {
-                    CheckMajorReleaseSemverCommits(release);
-                }
-                else if (release.IsMajorOrMinor)
-                {
-                    CheckMinorReleaseSemverCommits(release);
-                }
-                else
-                {
-                    CheckPatchReleaseSemverCommits(release);
-                }
+                CheckMajorReleaseSemverCommits(release);
+            }
+        }
+
+
+        void CheckMinorReleaseSemverCommits()
+        {
+            foreach (var release in MinorReleases)
+            {
+                CheckMinorReleaseSemverCommits(release);
+            }
+        }
+
+
+        void CheckPatchReleaseSemverCommits()
+        {
+            foreach (var release in PatchReleases)
+            {
+                CheckPatchReleaseSemverCommits(release);
             }
         }
 
