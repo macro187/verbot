@@ -12,9 +12,6 @@ namespace Verbot
 
         public void CheckLocal()
         {
-            CheckForVersionLocationsOnDisk();
-            CheckNoConflictingVersionsOnDisk();
-            CheckNoMissingVersionsOnDisk();
             CheckNoMergeCommits();
             CheckNoReleaseZero();
             CheckNoCommitsWithMultipleReleases();

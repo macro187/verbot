@@ -51,8 +51,6 @@ namespace Verbot
         {
             Guard.NotNull(version, nameof(version));
 
-            CheckForVersionLocationsOnDisk();
-
             foreach (var location in FindOnDiskLocations())
             {
                 location.Write(version);
