@@ -172,7 +172,7 @@ namespace Verbot
 
             foreach (var release in ReleasesAscending)
             {
-                var previousRelease = release.PreviousReleaseAncestor;
+                var previousRelease = release.PreviousAncestralRelease;
                 if (previousRelease == null) continue;
                 if (release.Version < previousRelease.Version)
                 {
@@ -195,7 +195,7 @@ namespace Verbot
                     result &=
                         release.IsMajor
                             ? CheckMajorReleaseLineage(release)
-                        : release.IsMinor
+                        : release.IsMajorOrMinor
                             ? CheckMinorReleaseLineage(release)
                         : CheckPatchReleaseLineage(release));
 
@@ -225,9 +225,9 @@ namespace Verbot
         bool CheckMinorReleaseLineage(ReleaseInfo release)
         {
             var version = release.Version;
-            if (!release.Commit.IsDescendentOf(release.PreviousMinorRelease.Commit))
+            if (!release.Commit.IsDescendentOf(release.PreviousNumericMajorOrMinorRelease.Commit))
             {
-                var previousMinorVersion = release.PreviousMinorRelease.Version;
+                var previousMinorVersion = release.PreviousNumericMajorOrMinorRelease.Version;
                 Trace.TraceError($"Release {version} does not descend from {previousMinorVersion}");
                 return false;
             }
@@ -238,9 +238,9 @@ namespace Verbot
         bool CheckPatchReleaseLineage(ReleaseInfo release)
         {
             var version = release.Version;
-            if (!release.Commit.IsDescendentOf(release.PreviousReleaseNumeric.Commit))
+            if (!release.Commit.IsDescendentOf(release.PreviousNumericRelease.Commit))
             {
-                var previousVersion = release.PreviousReleaseNumeric.Version;
+                var previousVersion = release.PreviousNumericRelease.Version;
                 Trace.TraceError($"Release {version} does not descend from {previousVersion}");
                 return false;
             }
@@ -256,7 +256,7 @@ namespace Verbot
                 {
                     CheckMajorReleaseSemverCommits(release);
                 }
-                else if (release.IsMinor)
+                else if (release.IsMajorOrMinor)
                 {
                     CheckMinorReleaseSemverCommits(release);
                 }
@@ -271,10 +271,10 @@ namespace Verbot
         void CheckMajorReleaseSemverCommits(ReleaseInfo release)
         {
             var version = release.Version;
-            var breakingChange = release.CommitsSincePreviousReleaseAncestor.FirstOrDefault(c => c.IsBreaking);
+            var breakingChange = release.CommitsSincePreviousAncestralRelease.FirstOrDefault(c => c.IsBreaking);
             if (breakingChange == null)
             {
-                var previousVersion = release.PreviousReleaseAncestor?.Version ?? "beginning";
+                var previousVersion = release.PreviousAncestralRelease?.Version ?? "beginning";
                 Trace.TraceWarning($"No breaking change(s) between {previousVersion} and {version}");
             }
         }
@@ -284,19 +284,19 @@ namespace Verbot
         {
             var version = release.Version;
 
-            var breakingChange = release.CommitsSincePreviousReleaseAncestor.FirstOrDefault(c => c.IsBreaking);
+            var breakingChange = release.CommitsSincePreviousAncestralRelease.FirstOrDefault(c => c.IsBreaking);
             if (breakingChange != null)
             {
-                var previousVersion = release.PreviousReleaseAncestor?.Version ?? "beginning";
+                var previousVersion = release.PreviousAncestralRelease?.Version ?? "beginning";
                 Trace.TraceWarning($"Breaking change between {previousVersion} and {version}");
                 Trace.TraceWarning(breakingChange.Sha1);
                 Trace.TraceWarning(breakingChange.Message);
             }
 
-            var featureChange = release.CommitsSincePreviousReleaseAncestor.FirstOrDefault(c => c.IsFeature);
+            var featureChange = release.CommitsSincePreviousAncestralRelease.FirstOrDefault(c => c.IsFeature);
             if (featureChange == null)
             {
-                var previousVersion = release.PreviousReleaseAncestor?.Version ?? "beginning";
+                var previousVersion = release.PreviousAncestralRelease?.Version ?? "beginning";
                 Trace.TraceWarning($"No feature change(s) between {previousVersion} and {version}");
             }
         }
@@ -306,19 +306,19 @@ namespace Verbot
         {
             var version = release.Version;
 
-            var breakingChange = release.CommitsSincePreviousReleaseAncestor.FirstOrDefault(c => c.IsBreaking);
+            var breakingChange = release.CommitsSincePreviousAncestralRelease.FirstOrDefault(c => c.IsBreaking);
             if (breakingChange != null)
             {
-                var previousVersion = release.PreviousReleaseAncestor?.Version ?? "beginning";
+                var previousVersion = release.PreviousAncestralRelease?.Version ?? "beginning";
                 Trace.TraceWarning($"Breaking change between {previousVersion} and {version}");
                 Trace.TraceWarning(breakingChange.Sha1);
                 Trace.TraceWarning(breakingChange.Message);
             }
 
-            var featureChange = release.CommitsSincePreviousReleaseAncestor.FirstOrDefault(c => c.IsFeature);
+            var featureChange = release.CommitsSincePreviousAncestralRelease.FirstOrDefault(c => c.IsFeature);
             if (featureChange != null)
             {
-                var previousVersion = release.PreviousReleaseAncestor?.Version ?? "beginning";
+                var previousVersion = release.PreviousAncestralRelease?.Version ?? "beginning";
                 Trace.TraceWarning($"Feature change(s) between {previousVersion} and {version}");
                 Trace.TraceWarning(featureChange.Sha1);
                 Trace.TraceWarning(featureChange.Message);

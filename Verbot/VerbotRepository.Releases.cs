@@ -44,9 +44,17 @@ namespace Verbot
         public IEnumerable<ReleaseInfo> MajorReleases =>
             ReleasesDescending.Where(r => r.IsMajor);
 
-        
+
         public IEnumerable<ReleaseInfo> MinorReleases =>
             ReleasesDescending.Where(r => r.IsMinor);
+
+
+        public IEnumerable<ReleaseInfo> PatchReleases =>
+            ReleasesDescending.Where(r => r.IsPatch);
+
+        
+        public IEnumerable<ReleaseInfo> MajorOrMinorReleases =>
+            ReleasesDescending.Where(r => r.IsMajorOrMinor);
 
 
         public IEnumerable<ReleaseInfo> LatestMajorSeriesReleases =>
@@ -61,7 +69,13 @@ namespace Verbot
                 .GroupBy(r => r.Version.Change(patch: 0))
                 .Select(g => g.OrderBy(r => r.Version).Last())
                 .OrderBy(r => r.Version);
+
+
+        ILookup<CommitInfo, ReleaseInfo> CommitReleaseLookup =>
+            CommitReleaseLookupCache ?? (CommitReleaseLookupCache =
+                ReleasesDescending.ToLookup(t => t.Commit));
         
+
         IDictionary<SemVersion, ReleaseInfo> VersionReleaseLookup =>
             VersionReleaseLookupCache ?? (VersionReleaseLookupCache =
                 ReleasesDescending.ToDictionary(t => t.Version));
@@ -152,11 +166,6 @@ namespace Verbot
             VersionReleaseLookup.ContainsKey(version) ? VersionReleaseLookup[version] : null;
 
 
-        ILookup<CommitInfo, ReleaseInfo> CommitReleaseLookup =>
-            CommitReleaseLookupCache ?? (CommitReleaseLookupCache =
-                ReleasesDescending.ToLookup(t => t.Commit));
-
-
         public IEnumerable<ReleaseInfo> GetReleases(CommitInfo commit) =>
             CommitReleaseLookup.Contains(commit)
                 ? CommitReleaseLookup[commit]
@@ -165,13 +174,6 @@ namespace Verbot
 
         public IEnumerable<GitRefWithRemote> FindReleaseTagsWithRemote() =>
             GetRemoteInfo(ReleasesDescending.Select(t => t.Tag)).ToList();
-
-
-        public ReleaseInfo FindPreviousReleaseAncestor(CommitInfo commit) =>
-            commit.GetCommitsSince(null)
-                .Reverse()
-                .Select(c => GetReleases(c).SingleOrDefault())
-                .FirstOrDefault(r => r != null);
 
     }
 }

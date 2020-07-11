@@ -38,23 +38,18 @@ namespace Verbot
         public RefInfo Tag { get; }
         public CommitInfo Commit => Tag.Target;
         public bool IsMajor => Version.Minor == 0 && Version.Patch == 0;
-        public bool IsMinor => Version.Patch == 0;
+        public bool IsMinor => Version.Minor > 0 && Version.Patch == 0;
+        public bool IsPatch => Version.Patch > 0;
+        public bool IsMajorOrMinor => Version.Patch == 0;
 
 
-        public ReleaseInfo PreviousMajorRelease =>
-            IsMajor
-                ? Repository.FindRelease(new SemVersion(Version.Major - 1, 0, 0))
-                : Repository.FindRelease(Version.Change(minor: 0, patch: 0));
-
-
-        public ReleaseInfo PreviousMinorRelease =>
+        public ReleaseInfo PreviousNumericRelease =>
             Repository.ReleasesDescending
                 .Where(r => r.Version < Version)
-                .Where(r => r.IsMinor)
                 .FirstOrDefault();
 
 
-        public ReleaseInfo PreviousReleaseAncestor =>
+        public ReleaseInfo PreviousAncestralRelease =>
             Commit.GetCommitsBackTo(null)
                 .Skip(1)
                 .Select(commit =>
@@ -64,14 +59,21 @@ namespace Verbot
                 .FirstOrDefault(r => r != null);
 
 
-        public ReleaseInfo PreviousReleaseNumeric =>
+        public ReleaseInfo PreviousMajorRelease =>
+            IsMajor
+                ? Repository.FindRelease(new SemVersion(Version.Major - 1, 0, 0))
+                : Repository.FindRelease(Version.Change(minor: 0, patch: 0));
+
+
+        public ReleaseInfo PreviousNumericMajorOrMinorRelease =>
             Repository.ReleasesDescending
                 .Where(r => r.Version < Version)
+                .Where(r => r.IsMajorOrMinor)
                 .FirstOrDefault();
 
 
-        public IEnumerable<CommitInfo> CommitsSincePreviousReleaseAncestor =>
-            Commit.GetCommitsSince(PreviousReleaseAncestor?.Commit);
+        public IEnumerable<CommitInfo> CommitsSincePreviousAncestralRelease =>
+            Commit.GetCommitsSince(PreviousAncestralRelease?.Commit);
 
     }
 }
