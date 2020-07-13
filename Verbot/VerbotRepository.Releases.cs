@@ -18,16 +18,8 @@ namespace Verbot
 
         public IEnumerable<ReleaseInfo> ReleasesAscending =>
             ReleasesAscendingCache ?? (ReleasesAscendingCache =
-                Tags
-                    .Select(tag =>
-                    {
-                        SemVersion.TryParse(tag.Name, out var version, true);
-                        return (Ref: tag, Version: version);
-                    })
-                    .Where(tag => tag.Version != null)
-                    .Where(tag => tag.Version.Prerelease == "")
-                    .Where(tag => tag.Version.Build == "")
-                    .Select(tag => new ReleaseInfo(this, tag.Version, tag.Ref))
+                ReleaseTags
+                    .Select(tag => new ReleaseInfo(this, tag))
                     .OrderBy(release => release.Version)
                     .ToList());
 

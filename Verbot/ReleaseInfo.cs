@@ -12,25 +12,14 @@ namespace Verbot
         readonly VerbotRepository Repository;
 
 
-        public ReleaseInfo(VerbotRepository repository, SemVersion version, RefInfo tag)
+        public ReleaseInfo(VerbotRepository repository, ReleaseTagInfo tagInfo)
         {
             Guard.NotNull(repository, nameof(repository));
-
-            Guard.NotNull(version, nameof(version));
-            if (version.Prerelease != "" || version.Build != "")
-            {
-                throw new ArgumentException("Not a release version", nameof(version));
-            }
-
-            Guard.NotNull(tag, nameof(tag));
-            if (!tag.IsTag)
-            {
-                throw new ArgumentException("Not a tag", nameof(tag));
-            }
+            Guard.NotNull(tagInfo, nameof(tagInfo));
 
             Repository = repository;
-            Version = version;
-            Tag = tag;
+            Version = tagInfo.Version;
+            Tag = tagInfo.Ref;
         }
 
 
