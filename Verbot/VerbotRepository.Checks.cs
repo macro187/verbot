@@ -12,6 +12,18 @@ namespace Verbot
 
         public void CheckLocal()
         {
+            // Issues:
+            //
+            // Error, later checks (and other operations) rely on that assumption
+            //
+            // Warn, later checks (and maybe other operations?) don't depend on it
+            //
+            // Any of the above => non-zero exit code
+            //
+            // Relationship to repair command: What can be fixed? Same as warnings?
+            // 
+
+            // Error
             CheckNoMergeCommits();
             CheckNoReleaseZero();
             CheckNoCommitsWithMultipleReleases();
@@ -20,13 +32,19 @@ namespace Verbot
             CheckMajorReleaseOrdering();
             CheckMinorReleaseOrdering();
             CheckPatchReleaseOrdering();
+
+            // Warn
             CheckMajorReleaseSemverChanges();
             CheckMinorReleaseSemverChanges();
             CheckPatchReleaseSemverChanges();
             CheckNoMissingLatestBranches();
             CheckLatestBranchesAtCorrectReleases();
             CheckNoMissingMasterBranches();
+
+            // Error
             CheckMasterBranchesInCorrectReleaseSeries();
+
+            // Warn
             CheckMasterBranchesNotBehind();
         }
 
