@@ -3,13 +3,23 @@ using System.Linq;
 using MacroGit;
 using MacroSemver;
 using MacroCollections;
-using System.Text.RegularExpressions;
 
 namespace Verbot
 {
-    partial class VerbotRepository
+    class RefContext
     {
+
+        readonly GitRepository GitRepository;
+        readonly CommitContext CommitContext;
+
         
+        public RefContext(GitRepository gitRepository, CommitContext commitContext)
+        {
+            GitRepository = gitRepository;
+            CommitContext = commitContext;
+        }
+
+
         IEnumerable<RefInfo> RefsCache;
         IEnumerable<RefInfo> TagsCache;
         IEnumerable<RefInfo> BranchesCache;
@@ -21,7 +31,7 @@ namespace Verbot
         public IEnumerable<RefInfo> Refs =>
             RefsCache ?? (RefsCache =
                 GitRepository.GetRefs()
-                    .Select(r => new RefInfo(this, r))
+                    .Select(r => new RefInfo(this, CommitContext, r))
                     .ToList());
 
 
@@ -68,7 +78,7 @@ namespace Verbot
                 ReleaseTags.ToLookup(tag => tag.Ref.Target));
 
 
-        IEnumerable<ReleaseTagInfo> GetReleaseTags(CommitInfo commit) =>
+        public IEnumerable<ReleaseTagInfo> GetReleaseTags(CommitInfo commit) =>
             CommitReleaseTagLookup.Contains(commit)
                 ? CommitReleaseTagLookup[commit]
                 : Enumerable.Empty<ReleaseTagInfo>();
@@ -83,7 +93,7 @@ namespace Verbot
         //         .Where(branch => IsMasterBranchName(branch.Name));
 
 
-        IEnumerable<GitRefWithRemote> GetRemoteInfo(IEnumerable<RefInfo> refs)
+        public IEnumerable<GitRefWithRemote> GetRemoteInfo(IEnumerable<RefInfo> refs)
         {
             var remoteRefs = GitRepository.GetRemoteRefs().ToDictionary(r => r.FullName, r => r.Target);
 

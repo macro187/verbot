@@ -5,13 +5,13 @@ using MacroSln;
 namespace Verbot
 {
 
-    class DotNetOnDiskLocation : IOnDiskLocation
+    class DotNetDiskLocation : IDiskLocation
     {
 
         readonly VisualStudioProject Project;
 
 
-        public DotNetOnDiskLocation(VisualStudioProject project)
+        public DotNetDiskLocation(VisualStudioProject project)
         {
             Guard.NotNull(project, nameof(project));
             Project = project;

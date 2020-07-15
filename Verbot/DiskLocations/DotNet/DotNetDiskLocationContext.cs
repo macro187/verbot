@@ -2,15 +2,25 @@ using System.Linq;
 using System.Collections.Generic;
 using MacroSln;
 using System;
+using MacroGit;
 
 namespace Verbot
 {
-    partial class VerbotRepository
+    class DotNetDiskLocationContext
     {
 
-        IReadOnlyCollection<IOnDiskLocation> FindDotNetOnDiskLocations() =>
+        readonly VisualStudioSolution Solution;
+
+
+        public DotNetDiskLocationContext(GitRepository gitRepository)
+        {
+            Solution = VisualStudioSolution.Find(gitRepository.Path);
+        }
+
+
+        public IReadOnlyCollection<IDiskLocation> FindDiskLocations() =>
             FindProjects()
-                .Select(p => new DotNetOnDiskLocation(p))
+                .Select(p => new DotNetDiskLocation(p))
                 .ToList();
 
 

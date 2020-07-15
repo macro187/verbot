@@ -6,15 +6,32 @@ using System.Collections.Generic;
 
 namespace Verbot
 {
-    partial class VerbotRepository
+    class OldCommands
     {
+
+        readonly Context Context;
+
+
+        public OldCommands(Context context)
+        {
+            Context = context;
+        }
+
+
+        public void CheckRemote()
+        {
+            CheckForRemoteBranchesAtUnknownCommits();
+            CheckForRemoteBranchesNotBehindLocal();
+            CheckForIncorrectRemoteTags();
+        }
+
 
         public void Push(bool dryRun)
         {
             CheckNoUncommittedChanges();
 
             var verbotBranchesWithRemote = GetVerbotBranchesWithRemote();
-            var verbotTagsWithRemote = FindReleaseTagsWithRemote();
+            var verbotTagsWithRemote = Context.ReleaseContext.FindReleaseTagsWithRemote();
 
             CheckForRemoteBranchesAtUnknownCommits();
             CheckForRemoteBranchesNotBehindLocal();
@@ -30,13 +47,20 @@ namespace Verbot
                 return;
             }
 
-            GitRepository.Push(refsToPush.Select(r => r.FullName), dryRun: dryRun, echoOutput: true);
+            Context.GitRepository.Push(refsToPush.Select(r => r.FullName), dryRun: dryRun, echoOutput: true);
+        }
+
+
+        void CheckNoUncommittedChanges()
+        {
+            if (Context.GitRepository.HasUncommittedChanges())
+                throw new UserException("Uncommitted changes in repository");
         }
 
 
         void CheckForIncorrectRemoteTags()
         {
-            var verbotTagsWithRemote = FindReleaseTagsWithRemote();
+            var verbotTagsWithRemote = Context.ReleaseContext.FindReleaseTagsWithRemote();
 
             var incorrectRemoteTags =
                 verbotTagsWithRemote
@@ -62,7 +86,7 @@ namespace Verbot
             var remoteBranchesAtUnknownCommits =
                 verbotBranchesWithRemote
                     .Where(b => b.RemoteTargetSha1 != null)
-                    .Where(b => !GitRepository.Exists(b.RemoteTargetSha1))
+                    .Where(b => !Context.GitRepository.Exists(b.RemoteTargetSha1))
                     .ToList();
 
             if (!remoteBranchesAtUnknownCommits.Any()) return;
@@ -83,7 +107,7 @@ namespace Verbot
             var remoteBranchesNotBehindLocal =
                 verbotBranchesWithRemote
                     .Where(b => b.RemoteTargetSha1 != null)
-                    .Where(b => !GitRepository.IsAncestor(b.RemoteTargetSha1, b.Target.Sha1))
+                    .Where(b => !Context.GitRepository.IsAncestor(b.RemoteTargetSha1, b.Target.Sha1))
                     .ToList();
 
             if (!remoteBranchesNotBehindLocal.Any()) return;
@@ -99,9 +123,9 @@ namespace Verbot
 
 
         IEnumerable<RefInfo> VerbotBranches =>
-            Branches
+            Context.RefContext.Branches
                 .Where(b =>
-                    CalculateMasterBranchSeries(b) != null ||
+                    Context.MasterBranchContext.CalculateMasterBranchSeries(b) != null ||
                     b.Name == "latest" ||
                     MajorLatestBranchInfo.IsMajorLatestBranchName(b.Name) ||
                     MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name))
@@ -109,7 +133,7 @@ namespace Verbot
 
 
         public IEnumerable<GitRefWithRemote> GetVerbotBranchesWithRemote() =>
-            GetRemoteInfo(VerbotBranches).ToList();
+            Context.RefContext.GetRemoteInfo(VerbotBranches).ToList();
 
     }
 }

@@ -7,9 +7,22 @@ using MacroSemver;
 
 namespace Verbot
 {
-    partial class VerbotRepository
+    class ReleaseContext
     {
+
+        readonly RefContext RefContext;
+        CalculationContext CalculationContext;
+        GitRepository GitRepository;
+
+
+        public ReleaseContext(RefContext refContext, CalculationContext calculationContext, GitRepository gitRepository)
+        {
+            RefContext = refContext;
+            CalculationContext = calculationContext;
+            GitRepository = gitRepository;
+        }
         
+
         IEnumerable<ReleaseInfo> ReleasesAscendingCache;
         IEnumerable<ReleaseInfo> ReleasesDescendingCache;
         IDictionary<SemVersion, ReleaseInfo> VersionReleaseLookupCache;
@@ -18,7 +31,7 @@ namespace Verbot
 
         public IEnumerable<ReleaseInfo> ReleasesAscending =>
             ReleasesAscendingCache ?? (ReleasesAscendingCache =
-                ReleaseTags
+                RefContext.ReleaseTags
                     .Select(tag => new ReleaseInfo(this, tag))
                     .OrderBy(release => release.Version)
                     .ToList());
@@ -59,7 +72,7 @@ namespace Verbot
                 .OrderBy(r => r.Version);
 
 
-        ILookup<CommitInfo, ReleaseInfo> CommitReleaseLookup =>
+        public ILookup<CommitInfo, ReleaseInfo> CommitReleaseLookup =>
             CommitReleaseLookupCache ?? (CommitReleaseLookupCache =
                 ReleasesDescending.ToLookup(t => t.Commit));
         
@@ -134,7 +147,7 @@ namespace Verbot
             }
             */
 
-            var version = Calculate(Head.Target).CalculatedReleaseVersion;
+            var version = CalculationContext.Calculate(RefContext.Head.Target).CalculatedReleaseVersion;
 
             if (FindRelease(version) != null)
             {
@@ -161,7 +174,7 @@ namespace Verbot
 
 
         public IEnumerable<GitRefWithRemote> FindReleaseTagsWithRemote() =>
-            GetRemoteInfo(ReleasesDescending.Select(t => t.Tag)).ToList();
+            RefContext.GetRemoteInfo(ReleasesDescending.Select(t => t.Tag)).ToList();
 
     }
 }

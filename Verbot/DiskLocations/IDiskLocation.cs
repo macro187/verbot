@@ -7,7 +7,7 @@ namespace Verbot
     /// An on-disk location where the current version can be recorded
     /// </summary>
     ///
-    interface IOnDiskLocation
+    interface IDiskLocation
     {
 
         /// <summary>

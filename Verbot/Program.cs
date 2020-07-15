@@ -14,7 +14,7 @@ namespace Verbot
     class Program
     {
 
-        static bool Verbose;
+        static Context Context;
 
 
         static int Main(string[] args)
@@ -41,44 +41,41 @@ namespace Verbot
 
         static int Main2(Queue<string> args)
         {
+            var gitRepository = GitRepository.FindContainingRepository(Environment.CurrentDirectory);
+            if (gitRepository == null) throw new UserException("Not in a Git repository");
+
+            var verbose = false;
             while(args.Any() && args.Peek().StartsWith("--"))
             {
                 var option = args.Dequeue();
                 switch (option)
                 {
                     case "--verbose":
-                        Verbose = true;
+                        verbose = true;
                         break;
                     default:
                         throw new UserException($"Unrecognised option '{option}'");
                 }
             }
 
+            Context = new Context(gitRepository, verbose);
+
             if (args.Count == 0) throw new UserException("Expected <command>");
             var command = args.Dequeue();
-            switch (command.ToLowerInvariant())
+
+            return command.ToLowerInvariant() switch
             {
-                case "help":
-                    return Help(args);
-                case "calc":
-                    return Calc(args);
-                case "write":
-                    return Write(args);
-                case "reset":
-                    return Reset(args);
-                case "read":
-                    return Read(args);
-                case "release":
-                    return Release(args);
-                case "push":
-                    return Push(args);
-                case "check":
-                    return Check(args);
-                case "check-remote":
-                    return CheckRemote(args);
-                default:
-                    throw new UserException("Unrecognised command: " + command);
-            }
+                "help" => Help(args),
+                "calc" => Calc(args),
+                "write" => Write(args),
+                "reset" => Reset(args),
+                "read" => Read(args),
+                "release" => Release(args),
+                "push" => Push(args),
+                "check" => Check(args),
+                "check-remote" => CheckRemote(args),
+                _ => throw new UserException("Unrecognised command: " + command),
+            };
         }
 
 
@@ -109,8 +106,6 @@ namespace Verbot
 
         static int Calc(Queue<string> args)
         {
-            var repository = GetCurrentRepository();
-
             var release = false;
             var prerelease = false;
             while (args.Count > 0)
@@ -134,7 +129,7 @@ namespace Verbot
                 throw new UserException("Can't calculate --release and --prerelease version at the same time");
             }
 
-            var calculatedInfo = repository.Calculate(repository.Head.Target);
+            var calculatedInfo = Context.CalculationContext.Calculate(Context.RefContext.Head.Target);
 
             var version =
                 release
@@ -150,8 +145,6 @@ namespace Verbot
 
         static int Write(Queue<string> args)
         {
-            var repository = GetCurrentRepository();
-
             var release = false;
             var prerelease = false;
             while (args.Count > 0)
@@ -177,10 +170,10 @@ namespace Verbot
 
             var version =
                 release
-                    ? repository.WriteReleaseVersion()
+                    ? new WriteCommand(Context).WriteReleaseVersion()
                 : prerelease
-                    ? repository.WritePrereleaseVersion()
-                    : repository.WriteVersion();
+                    ? new WriteCommand(Context).WritePrereleaseVersion()
+                    : new WriteCommand(Context).WriteVersion();
 
             Console.Out.WriteLine(version.ToString());
             return 0;
@@ -189,28 +182,24 @@ namespace Verbot
 
         static int Reset(Queue<string> args)
         {
-            var repository = GetCurrentRepository();
-
             if (args.Count > 0)
             {
                 throw new UserException("Unexpected arguments");
             }
 
-            repository.WriteDefaultVersion();
+            new WriteCommand(Context).WriteDefaultVersion();
             return 0;
         }
 
 
         static int Read(Queue<string> args)
         {
-            var repository = GetCurrentRepository();
-
             if (args.Count > 0)
             {
                 throw new UserException("Unexpected arguments");
             }
 
-            var version = repository.ReadVersion();
+            var version = new ReadCommand(Context).ReadVersion();
             Console.Out.WriteLine(version);
             return 0;
         }
@@ -219,16 +208,13 @@ namespace Verbot
         static int Release(Queue<string> args)
         {
             if (args.Count > 0) throw new UserException("Unexpected arguments");
-            var repository = GetCurrentRepository();
-            repository.Release();
+            Context.ReleaseContext.Release();
             return 0;
         }
 
 
         static int Push(Queue<string> args)
         {
-            var repository = GetCurrentRepository();
-
             bool dryRun = false;
             while (args.Count > 0)
             {
@@ -242,7 +228,7 @@ namespace Verbot
                         throw new UserException($"Unrecognised argument: {arg}");
                 }
             }
-            repository.Push(dryRun);
+            new OldCommands(Context).Push(dryRun);
 
             return 0;
         }
@@ -250,33 +236,17 @@ namespace Verbot
 
         static int Check(Queue<string> args)
         {
-            var repository = GetCurrentRepository();
-
             if (args.Count > 0) throw new UserException("Unexpected arguments");
-
-            repository.CheckLocal();
-
+            Context.CheckContext.CheckLocal();
             return 0;
         }
 
 
         static int CheckRemote(Queue<string> args)
         {
-            var repository = GetCurrentRepository();
-
             if (args.Count > 0) throw new UserException("Unexpected arguments");
-
-            repository.CheckRemote();
-
+            new OldCommands(Context).CheckRemote();
             return 0;
-        }
-
-
-        static VerbotRepository GetCurrentRepository()
-        {
-            var repo = GitRepository.FindContainingRepository(Environment.CurrentDirectory);
-            if (repo == null) throw new UserException("Not in a Git repository");
-            return new VerbotRepository(repo, Verbose);
         }
 
     }

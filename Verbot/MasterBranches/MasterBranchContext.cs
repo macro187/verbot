@@ -9,8 +9,24 @@ using MacroSemver;
 
 namespace Verbot
 {
-    partial class VerbotRepository
+    class MasterBranchContext
     {
+
+        readonly RefContext RefContext;
+        readonly ReleaseContext ReleaseContext;
+        readonly CalculationContext CalculationContext;
+
+
+        public MasterBranchContext(
+            ReleaseContext releaseContext,
+            RefContext refContext,
+            CalculationContext calculationContext)
+        {
+            ReleaseContext = releaseContext;
+            RefContext = refContext;
+            CalculationContext = calculationContext;
+        }
+
 
         IEnumerable<MasterBranchInfo> MasterBranchesCache;
         IEnumerable<MasterBranchSpec> LatestMasterBranchPointsCache;
@@ -19,7 +35,7 @@ namespace Verbot
 
         public IEnumerable<MasterBranchInfo> MasterBranches =>
             MasterBranchesCache ?? (MasterBranchesCache =
-                Branches
+                RefContext.Branches
                     .Select(b => (Ref: b, Series: CalculateMasterBranchSeries(b)))
                     .Where(b => b.Series != null)
                     .Select(b => new MasterBranchInfo(b.Ref, b.Series))
@@ -40,7 +56,7 @@ namespace Verbot
         IEnumerable<MasterBranchSpec> FindLatestMasterBranchPoints()
         {
             var leaves =
-                ReleasesDescending
+                ReleaseContext.ReleasesDescending
                     .Select(r => r.Commit)
                 .Concat(MasterBranches
                     .Select(b => b.Target))
@@ -48,11 +64,11 @@ namespace Verbot
 
             foreach (var leaf in leaves)
             {
-                CalculateTo(leaf);
+                CalculationContext.CalculateTo(leaf);
             }
 
             var candidates = new HashSet<CommitInfo>(leaves.SelectMany(leaf => leaf.GetCommitsSince(null)));
-            var states = candidates.Select(c => Calculate(c)).ToList();
+            var states = candidates.Select(c => CalculationContext.Calculate(c)).ToList();
 
             var latestCommitsInEachSeries =
                 states
@@ -90,14 +106,14 @@ namespace Verbot
         }
 
 
-        SemVersion CalculateMasterBranchSeries(RefInfo @ref)
+        public SemVersion CalculateMasterBranchSeries(RefInfo @ref)
         {
             Guard.NotNull(@ref, nameof(@ref));
             if (!@ref.IsBranch) throw new ArgumentException("Not a branch", nameof(@ref));
 
             if (@ref.Name == "master")
             {
-                return Calculate(@ref.Target).ReleaseSeries;
+                return CalculationContext.Calculate(@ref.Target).ReleaseSeries;
             }
 
             var match = Regex.Match(@ref.Name, @"^(\d+)\.(\d+)-master$");
@@ -115,7 +131,7 @@ namespace Verbot
         GitRefNameComponent CalculateMasterBranchName(SemVersion version)
         {
             var series = version.Change(patch: 0, prerelease: "", build: "");
-            var latestSeries = LatestRelease?.Version?.Change(patch: 0);
+            var latestSeries = ReleaseContext.LatestRelease?.Version?.Change(patch: 0);
             var isLatest = latestSeries == null || series >= latestSeries;
             return
                 isLatest

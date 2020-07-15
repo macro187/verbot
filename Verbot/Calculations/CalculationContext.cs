@@ -4,8 +4,17 @@ using MacroSemver;
 
 namespace Verbot
 {
-    partial class VerbotRepository
+    class CalculationContext
     {
+
+        readonly RefContext RefContext;
+
+
+        public CalculationContext(RefContext refContext)
+        {
+            RefContext = refContext;
+        }
+
 
         IDictionary<CommitInfo, CalculatedCommitInfo> CalculatedCommitInfoCache =
             new Dictionary<CommitInfo, CalculatedCommitInfo>();
@@ -17,7 +26,7 @@ namespace Verbot
                 : CalculateTo(commit);
 
 
-        CalculatedCommitInfo CalculateTo(CommitInfo to) =>
+        public CalculatedCommitInfo CalculateTo(CommitInfo to) =>
             to.GetCommitsSince(null)
                 .Aggregate(
                     new CalculatedCommitInfo()
@@ -37,7 +46,7 @@ namespace Verbot
                 Commit =
                     commit,
                 ReleaseTag =
-                    GetReleaseTags(commit).SingleOrDefault(), // Error if multiple
+                    RefContext.GetReleaseTags(commit).SingleOrDefault(), // Error if multiple
                 IsFeature =
                     commit.IsFeature,
                 IsFirstFeatureSincePreviousRelease =

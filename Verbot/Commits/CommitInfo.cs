@@ -10,17 +10,17 @@ namespace Verbot
     class CommitInfo
     {
 
-        readonly VerbotRepository VerbotRepository;
+        readonly CommitContext CommitContext;
         readonly GitRepository GitRepository;
         readonly GitCommitInfo GitCommit;
         
 
-        public CommitInfo(VerbotRepository verbotRepository, GitRepository gitRepository, GitCommitInfo gitCommit)
+        public CommitInfo(CommitContext commitContext, GitRepository gitRepository, GitCommitInfo gitCommit)
         {
-            Guard.NotNull(verbotRepository, nameof(verbotRepository));
+            Guard.NotNull(commitContext, nameof(commitContext));
             Guard.NotNull(gitRepository, nameof(gitRepository));
             Guard.NotNull(gitCommit, nameof(gitCommit));
-            VerbotRepository = verbotRepository;
+            CommitContext = commitContext;
             GitRepository = gitRepository;
             GitCommit = gitCommit;
             IsBreaking = MessageLines.Any(line => Regex.IsMatch(line.Trim(), @"^\+semver:\s?(breaking|major)$"));
@@ -53,11 +53,11 @@ namespace Verbot
 
 
         public IEnumerable<CommitInfo> GetCommitsSince(CommitInfo from) =>
-            VerbotRepository.GetCommitsForward(from, this);
+            CommitContext.GetCommitsForward(from, this);
 
 
         public IEnumerable<CommitInfo> GetCommitsBackTo(CommitInfo to) =>
-            VerbotRepository.GetCommitsBackward(this, to);
+            CommitContext.GetCommitsBackward(this, to);
 
     }
 }

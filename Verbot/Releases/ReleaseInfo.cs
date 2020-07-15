@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using MacroGuards;
@@ -9,15 +8,15 @@ namespace Verbot
     class ReleaseInfo
     {
 
-        readonly VerbotRepository Repository;
+        readonly ReleaseContext ReleaseContext;
 
 
-        public ReleaseInfo(VerbotRepository repository, ReleaseTagInfo tagInfo)
+        public ReleaseInfo(ReleaseContext releaseContext, ReleaseTagInfo tagInfo)
         {
-            Guard.NotNull(repository, nameof(repository));
+            Guard.NotNull(releaseContext, nameof(releaseContext));
             Guard.NotNull(tagInfo, nameof(tagInfo));
 
-            Repository = repository;
+            ReleaseContext = releaseContext;
             Version = tagInfo.Version;
             Tag = tagInfo.Ref;
         }
@@ -32,7 +31,7 @@ namespace Verbot
 
 
         public ReleaseInfo PreviousNumericRelease =>
-            Repository.ReleasesDescending
+            ReleaseContext.ReleasesDescending
                 .Where(r => r.Version < Version)
                 .FirstOrDefault();
 
@@ -41,7 +40,7 @@ namespace Verbot
             Commit.GetCommitsBackTo(null)
                 .Skip(1)
                 .Select(commit =>
-                    Repository.GetReleases(commit)
+                    ReleaseContext.GetReleases(commit)
                         .OrderBy(r => r.Version)
                         .LastOrDefault())
                 .FirstOrDefault(r => r != null);
@@ -49,12 +48,12 @@ namespace Verbot
 
         public ReleaseInfo PreviousMajorRelease =>
             IsMajor
-                ? Repository.FindRelease(new SemVersion(Version.Major - 1, 0, 0))
-                : Repository.FindRelease(Version.Change(minor: 0, patch: 0));
+                ? ReleaseContext.FindRelease(new SemVersion(Version.Major - 1, 0, 0))
+                : ReleaseContext.FindRelease(Version.Change(minor: 0, patch: 0));
 
 
         public ReleaseInfo PreviousNumericMajorOrMinorRelease =>
-            Repository.ReleasesDescending
+            ReleaseContext.ReleasesDescending
                 .Where(r => r.Version < Version)
                 .Where(r => r.IsMajor || r.IsMinor)
                 .FirstOrDefault();

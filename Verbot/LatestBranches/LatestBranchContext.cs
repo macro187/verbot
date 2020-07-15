@@ -4,24 +4,33 @@ using MacroGit;
 
 namespace Verbot
 {
-    partial class VerbotRepository
+    class LatestBranchContext
     {
 
-        IEnumerable<LatestBranchSpec> GetLatestBranchesThatShouldExist()
+        readonly ReleaseContext ReleaseContext;
+
+
+        public LatestBranchContext(ReleaseContext releaseContext)
         {
-            var latest = ReleasesAscending.LastOrDefault();
+            ReleaseContext = releaseContext;
+        }
+
+
+        public IEnumerable<LatestBranchSpec> GetLatestBranchesThatShouldExist()
+        {
+            var latest = ReleaseContext.ReleasesAscending.LastOrDefault();
             if (latest != null)
             {
                 yield return new LatestBranchSpec(new GitRefNameComponent("latest"), latest);
             }
 
-            foreach (var release in LatestMajorSeriesReleases)
+            foreach (var release in ReleaseContext.LatestMajorSeriesReleases)
             {
                 var major = release.Version.Major;
                 yield return new LatestBranchSpec(new GitRefNameComponent($"{major}-latest"), release);
             }
 
-            foreach (var release in LatestMinorSeriesReleases)
+            foreach (var release in ReleaseContext.LatestMinorSeriesReleases)
             {
                 var major = release.Version.Major;
                 var minor = release.Version.Minor;

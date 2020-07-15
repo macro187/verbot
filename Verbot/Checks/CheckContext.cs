@@ -1,14 +1,35 @@
 using System.Linq;
 using MacroExceptions;
 using System.Diagnostics;
-using MacroGit;
 using MacroSemver;
 using System.Collections.Generic;
 
 namespace Verbot
 {
-    partial class VerbotRepository
+    class CheckContext
     {
+
+        readonly MasterBranchContext MasterBranchContext;
+        readonly LatestBranchContext LatestBranchContext;
+        readonly ReleaseContext ReleaseContext;
+        readonly RefContext RefContext;
+        readonly CalculationContext CalculationContext;
+
+
+        public CheckContext(
+            MasterBranchContext masterBranchContext,
+            LatestBranchContext latestBranchContext,
+            ReleaseContext releaseContext,
+            RefContext refContext,
+            CalculationContext calculationContext)
+        {
+            MasterBranchContext = masterBranchContext;
+            LatestBranchContext = latestBranchContext;
+            ReleaseContext = releaseContext;
+            RefContext = refContext;
+            CalculationContext = calculationContext;
+        }
+
 
         public void CheckLocal()
         {
@@ -49,28 +70,13 @@ namespace Verbot
         }
 
 
-        public void CheckRemote()
-        {
-            CheckForRemoteBranchesAtUnknownCommits();
-            CheckForRemoteBranchesNotBehindLocal();
-            CheckForIncorrectRemoteTags();
-        }
-
-
-        void CheckNoUncommittedChanges()
-        {
-            if (GitRepository.HasUncommittedChanges())
-                throw new UserException("Uncommitted changes in repository");
-        }
-
-
         void CheckNoMergeCommits()
         {
             bool passed = true;
 
             var leaves =
-                ReleasesDescending.Select(r => r.Commit)
-                .Concat(MasterBranches.Select(b => b.Target));
+                ReleaseContext.ReleasesDescending.Select(r => r.Commit)
+                .Concat(MasterBranchContext.MasterBranches.Select(b => b.Target));
 
             foreach (var leaf in leaves)
             {
@@ -93,7 +99,7 @@ namespace Verbot
 
         void CheckNoReleaseZero()
         {
-            if (FindRelease(new SemVersion(0, 0, 0)) != null)
+            if (ReleaseContext.FindRelease(new SemVersion(0, 0, 0)) != null)
             {
                 throw new UserException("Found release 0.0.0");
             }
@@ -104,7 +110,7 @@ namespace Verbot
         {
             var passed = true;
 
-            foreach (var releases in CommitReleaseLookup)
+            foreach (var releases in ReleaseContext.CommitReleaseLookup)
             {
                 if (releases.Count() > 1)
                 {
@@ -144,12 +150,12 @@ namespace Verbot
 
         IEnumerable<SemVersion> FindMissingMajorReleases()
         {
-            var latestRelease = ReleasesDescending.FirstOrDefault();
+            var latestRelease = ReleaseContext.ReleasesDescending.FirstOrDefault();
             if (latestRelease == null) yield break;
             for (var major = 1; major <= latestRelease.Version.Major; major++)
             {
                 var version = new SemVersion(major, 0, 0);
-                if (FindRelease(version) == null)
+                if (ReleaseContext.FindRelease(version) == null)
                 {
                     yield return version;
                 }
@@ -159,12 +165,12 @@ namespace Verbot
 
         IEnumerable<SemVersion> FindMissingMinorReleases()
         {
-            foreach (var latestRelease in LatestMajorSeriesReleases)
+            foreach (var latestRelease in ReleaseContext.LatestMajorSeriesReleases)
             {
                 for (var minor = 1; minor <= latestRelease.Version.Minor; minor++)
                 {
                     var minorVersion = latestRelease.Version.Change(minor: minor, patch: 0);
-                    if (FindRelease(minorVersion) == null)
+                    if (ReleaseContext.FindRelease(minorVersion) == null)
                     {
                         yield return minorVersion;
                     }
@@ -175,12 +181,12 @@ namespace Verbot
 
         IEnumerable<SemVersion> FindMissingPatchReleases()
         {
-            foreach (var latestRelease in LatestMinorSeriesReleases)
+            foreach (var latestRelease in ReleaseContext.LatestMinorSeriesReleases)
             {
                 for (var patch = 1; patch < latestRelease.Version.Patch; patch++)
                 {
                     var patchVersion = latestRelease.Version.Change(patch: patch);
-                    if (FindRelease(patchVersion) == null)
+                    if (ReleaseContext.FindRelease(patchVersion) == null)
                     {
                         yield return patchVersion;
                     }
@@ -193,7 +199,7 @@ namespace Verbot
         {
             var passed = true;
 
-            foreach (var release in ReleasesAscending)
+            foreach (var release in ReleaseContext.ReleasesAscending)
             {
                 var previousRelease = release.PreviousAncestralRelease;
                 if (previousRelease == null) continue;
@@ -213,7 +219,7 @@ namespace Verbot
 
         void CheckMajorReleaseOrdering()
         {
-            if (!MajorReleases.All(r => CheckMajorReleaseOrdering(r)))
+            if (!ReleaseContext.MajorReleases.All(r => CheckMajorReleaseOrdering(r)))
             {
                 throw new UserException("Invalid major release lineage");
             }
@@ -222,7 +228,7 @@ namespace Verbot
 
         void CheckMinorReleaseOrdering()
         {
-            if (!MinorReleases.All(r => CheckMinorReleaseOrdering(r)))
+            if (!ReleaseContext.MinorReleases.All(r => CheckMinorReleaseOrdering(r)))
             {
                 throw new UserException("Invalid minor release lineage");
             }
@@ -231,7 +237,7 @@ namespace Verbot
 
         void CheckPatchReleaseOrdering()
         {
-            if (!PatchReleases.All(r => CheckPatchReleaseOrdering(r)))
+            if (!ReleaseContext.PatchReleases.All(r => CheckPatchReleaseOrdering(r)))
             {
                 throw new UserException("Invalid patch release lineage");
             }
@@ -282,7 +288,7 @@ namespace Verbot
 
         void CheckMajorReleaseSemverChanges()
         {
-            foreach (var release in MajorReleases)
+            foreach (var release in ReleaseContext.MajorReleases)
             {
                 CheckMajorReleaseSemverChanges(release);
             }
@@ -291,7 +297,7 @@ namespace Verbot
 
         void CheckMinorReleaseSemverChanges()
         {
-            foreach (var release in MinorReleases)
+            foreach (var release in ReleaseContext.MinorReleases)
             {
                 CheckMinorReleaseSemverChanges(release);
             }
@@ -300,7 +306,7 @@ namespace Verbot
 
         void CheckPatchReleaseSemverChanges()
         {
-            foreach (var release in PatchReleases)
+            foreach (var release in ReleaseContext.PatchReleases)
             {
                 CheckPatchReleaseSemverChanges(release);
             }
@@ -367,10 +373,10 @@ namespace Verbot
 
         void CheckNoMissingLatestBranches()
         {
-            foreach (var branchThatShouldExist in GetLatestBranchesThatShouldExist())
+            foreach (var branchThatShouldExist in LatestBranchContext.GetLatestBranchesThatShouldExist())
             {
                 var name = branchThatShouldExist.Name;
-                var branch = FindBranch(name);
+                var branch = RefContext.FindBranch(name);
                 if (branch == null)
                 {
                     Trace.TraceWarning($"Missing {name} branch");
@@ -382,10 +388,10 @@ namespace Verbot
 
         void CheckLatestBranchesAtCorrectReleases()
         {
-            foreach (var branchThatShouldExist in GetLatestBranchesThatShouldExist())
+            foreach (var branchThatShouldExist in LatestBranchContext.GetLatestBranchesThatShouldExist())
             {
                 var name = branchThatShouldExist.Name;
-                var branch = FindBranch(name);
+                var branch = RefContext.FindBranch(name);
                 if (branch == null) continue;
 
                 var correctCommit = branchThatShouldExist.Release.Commit;
@@ -399,9 +405,9 @@ namespace Verbot
 
         void CheckNoMissingMasterBranches()
         {
-            foreach (var spec in LatestMasterBranchPoints.OrderBy(spec => spec.Series))
+            foreach (var spec in MasterBranchContext.LatestMasterBranchPoints.OrderBy(spec => spec.Series))
             {
-                if (!MasterBranches.Any(b => b.Name == spec.Name))
+                if (!MasterBranchContext.MasterBranches.Any(b => b.Name == spec.Name))
                 {
                     Trace.TraceWarning($"Missing {spec.Name} branch");
                 }
@@ -413,9 +419,9 @@ namespace Verbot
         {
             var passed = true;
 
-            foreach (var branch in MasterBranches)
+            foreach (var branch in MasterBranchContext.MasterBranches)
             {
-                var state = Calculate(branch.Target);
+                var state = CalculationContext.Calculate(branch.Target);
                 if (branch.Series != state.ReleaseSeries)
                 {
                     Trace.TraceError($"{branch.Name} on incorrect release series {state.ReleaseSeries}");
@@ -432,9 +438,9 @@ namespace Verbot
 
         void CheckMasterBranchesNotBehind()
         {
-            foreach (var branch in MasterBranches)
+            foreach (var branch in MasterBranchContext.MasterBranches)
             {
-                var latestKnownPoint = LatestMasterBranchPointsByName[branch.Name];
+                var latestKnownPoint = MasterBranchContext.LatestMasterBranchPointsByName[branch.Name];
                 if (!branch.Target.IsDescendentOf(latestKnownPoint.Commit))
                 {
                     var name = branch.Name;

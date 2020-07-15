@@ -7,8 +7,17 @@ using MacroGuards;
 
 namespace Verbot
 {
-    partial class VerbotRepository
+    class CommitContext
     {
+
+        readonly GitRepository GitRepository;
+
+
+        public CommitContext(GitRepository gitRepository)
+        {
+            GitRepository = gitRepository;
+        }
+
 
         IDictionary<GitSha1, CommitInfo> CommitCache =
             new Dictionary<GitSha1, CommitInfo>();
