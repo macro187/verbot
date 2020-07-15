@@ -3,6 +3,7 @@ using System.Linq;
 using MacroGit;
 using MacroSemver;
 using MacroCollections;
+using System.Text.RegularExpressions;
 
 namespace Verbot
 {
@@ -77,6 +78,11 @@ namespace Verbot
             Branches.Where(b => b.Name == name).SingleOrDefault();
 
 
+        // IEnumerable<RefInfo> MasterBranches =>
+        //     Branches
+        //         .Where(branch => IsMasterBranchName(branch.Name));
+
+
         IEnumerable<GitRefWithRemote> GetRemoteInfo(IEnumerable<RefInfo> refs)
         {
             var remoteRefs = GitRepository.GetRemoteRefs().ToDictionary(r => r.FullName, r => r.Target);
@@ -86,6 +92,14 @@ namespace Verbot
 
             return refs.Select(r => new GitRefWithRemote(r, LookupRemoteTarget(r.FullName)));
         }
+
+
+        // static bool IsMasterBranchName(string name)
+        // {
+        //     if (name == "master") return true;
+        //     if (Regex.IsMatch(name, @"^(\d+)\.(\d+)-master$")) return true;
+        //     return false;
+        // }
 
     }
 }
