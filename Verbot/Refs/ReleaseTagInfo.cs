@@ -2,7 +2,7 @@ using System;
 using MacroGuards;
 using MacroSemver;
 
-namespace Verbot
+namespace Verbot.Refs
 {
     class ReleaseTagInfo
     {

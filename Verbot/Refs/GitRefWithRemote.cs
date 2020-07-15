@@ -1,6 +1,7 @@
 using MacroGit;
+using Verbot.Commits;
 
-namespace Verbot
+namespace Verbot.Refs
 {
     class GitRefWithRemote
     {

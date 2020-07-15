@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using MacroGit;
+using Verbot.DiskLocations.DotNet;
 
-namespace Verbot
+namespace Verbot.DiskLocations
 {
     class DiskLocationContext
     {

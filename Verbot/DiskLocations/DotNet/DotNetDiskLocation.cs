@@ -2,7 +2,7 @@ using MacroGuards;
 using MacroSemver;
 using MacroSln;
 
-namespace Verbot
+namespace Verbot.DiskLocations.DotNet
 {
 
     class DotNetDiskLocation : IDiskLocation

@@ -5,7 +5,7 @@ using MacroGit;
 using MacroCollections;
 using MacroGuards;
 
-namespace Verbot
+namespace Verbot.Commits
 {
     class CommitContext
     {
@@ -73,7 +73,7 @@ namespace Verbot
 
 
         IEnumerable<CommitInfo> RevList(int maxCount, GitRev rev) =>
-            RevList(maxCount, new[]{rev});
+            RevList(maxCount, new[] { rev });
 
 
         IEnumerable<CommitInfo> RevList(int maxCount, IEnumerable<GitRev> revs) =>

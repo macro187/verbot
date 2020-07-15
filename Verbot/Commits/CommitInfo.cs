@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using MacroGit;
 using MacroGuards;
 
-namespace Verbot
+namespace Verbot.Commits
 {
     class CommitInfo
     {
@@ -13,7 +13,7 @@ namespace Verbot
         readonly CommitContext CommitContext;
         readonly GitRepository GitRepository;
         readonly GitCommitInfo GitCommit;
-        
+
 
         public CommitInfo(CommitContext commitContext, GitRepository gitRepository, GitCommitInfo gitCommit)
         {
@@ -26,7 +26,7 @@ namespace Verbot
             IsBreaking = MessageLines.Any(line => Regex.IsMatch(line.Trim(), @"^\+semver:\s?(breaking|major)$"));
             IsFeature = MessageLines.Any(line => Regex.IsMatch(line.Trim(), @"^\+semver:\s?(feature|minor)$"));
         }
-        
+
 
         public bool IsBreaking { get; }
         public bool IsFeature { get; }

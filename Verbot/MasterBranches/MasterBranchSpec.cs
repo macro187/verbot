@@ -2,8 +2,9 @@ using System;
 using MacroGit;
 using MacroGuards;
 using MacroSemver;
+using Verbot.Commits;
 
-namespace Verbot
+namespace Verbot.MasterBranches
 {
     class MasterBranchSpec
     {

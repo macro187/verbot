@@ -3,8 +3,13 @@ using MacroExceptions;
 using System.Diagnostics;
 using MacroSemver;
 using System.Collections.Generic;
+using Verbot.Calculations;
+using Verbot.LatestBranches;
+using Verbot.MasterBranches;
+using Verbot.Refs;
+using Verbot.Releases;
 
-namespace Verbot
+namespace Verbot.Checks
 {
     class CheckContext
     {

@@ -1,6 +1,6 @@
 using MacroSemver;
 
-namespace Verbot
+namespace Verbot.DiskLocations
 {
 
     /// <summary>

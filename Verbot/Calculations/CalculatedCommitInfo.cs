@@ -1,6 +1,8 @@
 using MacroSemver;
+using Verbot.Commits;
+using Verbot.Refs;
 
-namespace Verbot
+namespace Verbot.Calculations
 {
     class CalculatedCommitInfo
     {

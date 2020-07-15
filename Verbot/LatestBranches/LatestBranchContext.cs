@@ -1,8 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using MacroGit;
+using Verbot.Releases;
 
-namespace Verbot
+namespace Verbot.LatestBranches
 {
     class LatestBranchContext
     {

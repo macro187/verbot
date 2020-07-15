@@ -1,7 +1,8 @@
 using MacroGit;
 using MacroGuards;
+using Verbot.Commits;
 
-namespace Verbot
+namespace Verbot.Refs
 {
     class RefInfo
     {
@@ -21,7 +22,7 @@ namespace Verbot
             CommitContext = commitContext;
             Ref = @ref;
         }
-        
+
 
         public GitRefNameComponent Name => Ref.Name;
         public GitFullRefName FullName => Ref.FullName;

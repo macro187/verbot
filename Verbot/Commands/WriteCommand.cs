@@ -1,12 +1,7 @@
-using System.Linq;
-using MacroExceptions;
-using System.Diagnostics;
-using MacroGit;
-using System.Collections.Generic;
 using MacroSemver;
 using MacroGuards;
 
-namespace Verbot
+namespace Verbot.Commands
 {
     class WriteCommand
     {
@@ -23,7 +18,7 @@ namespace Verbot
         public SemVersion WriteVersion() =>
             WriteVersion(Context.CalculationContext.Calculate(Context.RefContext.Head.Target).Version);
 
-          
+
         public SemVersion WriteReleaseVersion() =>
             WriteVersion(Context.CalculationContext.Calculate(Context.RefContext.Head.Target).CalculatedReleaseVersion);
 

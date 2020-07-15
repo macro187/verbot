@@ -5,7 +5,7 @@ using MacroGit;
 using MacroGuards;
 using MacroSemver;
 
-namespace Verbot
+namespace Verbot.LatestBranches
 {
     class MajorLatestBranchInfo
     {

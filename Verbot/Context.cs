@@ -2,10 +2,18 @@ using System.Diagnostics;
 using MacroGit;
 using MacroGuards;
 using MacroSemver;
+using Verbot.Calculations;
+using Verbot.Checks;
+using Verbot.Commits;
+using Verbot.DiskLocations;
+using Verbot.LatestBranches;
+using Verbot.MasterBranches;
+using Verbot.Refs;
+using Verbot.Releases;
 
 namespace Verbot
 {
-    partial class Context
+    class Context
     {
 
         public static readonly SemVersion DefaultVersion = new SemVersion(9999, 0, 0, "alpha");

@@ -6,8 +6,12 @@ using System.Text.RegularExpressions;
 using MacroGit;
 using MacroGuards;
 using MacroSemver;
+using Verbot.Calculations;
+using Verbot.Commits;
+using Verbot.Refs;
+using Verbot.Releases;
 
-namespace Verbot
+namespace Verbot.MasterBranches
 {
     class MasterBranchContext
     {
@@ -90,7 +94,7 @@ namespace Verbot
             {
                 yield return
                     new MasterBranchSpec(
-                        latestSeriesLatestCommit.ReleaseSeries, 
+                        latestSeriesLatestCommit.ReleaseSeries,
                         latestSeriesLatestCommit.Commit,
                         new GitRefNameComponent("master"));
             }
@@ -99,7 +103,7 @@ namespace Verbot
             {
                 yield return
                     new MasterBranchSpec(
-                        commit.ReleaseSeries, 
+                        commit.ReleaseSeries,
                         commit.Commit,
                         new GitRefNameComponent($"{commit.Major}.{commit.Minor}-master"));
             }

@@ -3,8 +3,9 @@ using System.Linq;
 using MacroGit;
 using MacroSemver;
 using MacroCollections;
+using Verbot.Commits;
 
-namespace Verbot
+namespace Verbot.Refs
 {
     class RefContext
     {
@@ -12,7 +13,7 @@ namespace Verbot
         readonly GitRepository GitRepository;
         readonly CommitContext CommitContext;
 
-        
+
         public RefContext(GitRepository gitRepository, CommitContext commitContext)
         {
             GitRepository = gitRepository;
@@ -72,7 +73,7 @@ namespace Verbot
                     .Select(tag => new ReleaseTagInfo(tag.Version, tag.Ref))
                     .ToList());
 
-        
+
         ILookup<CommitInfo, ReleaseTagInfo> CommitReleaseTagLookup =>
             CommitReleaseTagLookupCache ?? (CommitReleaseTagLookupCache =
                 ReleaseTags.ToLookup(tag => tag.Ref.Target));

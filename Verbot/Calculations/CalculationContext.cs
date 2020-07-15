@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using MacroSemver;
+using Verbot.Commits;
+using Verbot.Refs;
 
-namespace Verbot
+namespace Verbot.Calculations
 {
     class CalculationContext
     {
@@ -33,7 +35,7 @@ namespace Verbot
                     {
                         Minor = 1,
                     },
-                    (previousState, commit) => 
+                    (previousState, commit) =>
                         CalculatedCommitInfoCache.ContainsKey(commit)
                             ? CalculatedCommitInfoCache[commit]
                             : CalculatedCommitInfoCache[commit] = Calculate(commit, previousState));

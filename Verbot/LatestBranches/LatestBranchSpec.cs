@@ -1,7 +1,8 @@
 using MacroGit;
 using MacroGuards;
+using Verbot.Releases;
 
-namespace Verbot
+namespace Verbot.LatestBranches
 {
     class LatestBranchSpec
     {

@@ -1,10 +1,11 @@
 using System.Linq;
 using MacroExceptions;
 using System.Diagnostics;
-using MacroGit;
 using System.Collections.Generic;
+using Verbot.LatestBranches;
+using Verbot.Refs;
 
-namespace Verbot
+namespace Verbot.Commands
 {
     class OldCommands
     {

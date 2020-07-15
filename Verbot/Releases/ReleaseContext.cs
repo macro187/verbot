@@ -4,8 +4,11 @@ using System.Linq;
 using MacroExceptions;
 using MacroGit;
 using MacroSemver;
+using Verbot.Calculations;
+using Verbot.Commits;
+using Verbot.Refs;
 
-namespace Verbot
+namespace Verbot.Releases
 {
     class ReleaseContext
     {
@@ -21,7 +24,7 @@ namespace Verbot
             CalculationContext = calculationContext;
             GitRepository = gitRepository;
         }
-        
+
 
         IEnumerable<ReleaseInfo> ReleasesAscendingCache;
         IEnumerable<ReleaseInfo> ReleasesDescendingCache;
@@ -57,7 +60,7 @@ namespace Verbot
         public IEnumerable<ReleaseInfo> PatchReleases =>
             ReleasesDescending.Where(r => r.IsPatch);
 
-        
+
         public IEnumerable<ReleaseInfo> LatestMajorSeriesReleases =>
             ReleasesAscending
                 .GroupBy(r => r.Version.Change(minor: 0, patch: 0))
@@ -75,7 +78,7 @@ namespace Verbot
         public ILookup<CommitInfo, ReleaseInfo> CommitReleaseLookup =>
             CommitReleaseLookupCache ?? (CommitReleaseLookupCache =
                 ReleasesDescending.ToLookup(t => t.Commit));
-        
+
 
         IDictionary<SemVersion, ReleaseInfo> VersionReleaseLookup =>
             VersionReleaseLookupCache ?? (VersionReleaseLookupCache =

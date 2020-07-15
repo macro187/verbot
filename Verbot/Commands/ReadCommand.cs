@@ -2,7 +2,7 @@ using System.Linq;
 using MacroExceptions;
 using MacroSemver;
 
-namespace Verbot
+namespace Verbot.Commands
 {
     class ReadCommand
     {

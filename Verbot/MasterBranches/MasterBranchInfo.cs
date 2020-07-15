@@ -2,8 +2,10 @@ using System;
 using MacroGit;
 using MacroGuards;
 using MacroSemver;
+using Verbot.Commits;
+using Verbot.Refs;
 
-namespace Verbot
+namespace Verbot.MasterBranches
 {
     class MasterBranchInfo
     {

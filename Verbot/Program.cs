@@ -8,6 +8,7 @@ using MacroIO;
 using MacroConsole;
 using MacroGit;
 using System.Linq;
+using Verbot.Commands;
 
 namespace Verbot
 {

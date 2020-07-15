@@ -4,7 +4,7 @@ using MacroSln;
 using System;
 using MacroGit;
 
-namespace Verbot
+namespace Verbot.DiskLocations.DotNet
 {
     class DotNetDiskLocationContext
     {

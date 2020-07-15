@@ -2,8 +2,10 @@ using System.Collections.Generic;
 using System.Linq;
 using MacroGuards;
 using MacroSemver;
+using Verbot.Commits;
+using Verbot.Refs;
 
-namespace Verbot
+namespace Verbot.Releases
 {
     class ReleaseInfo
     {
