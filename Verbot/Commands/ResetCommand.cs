@@ -1,16 +1,15 @@
-using System;
 using System.Collections.Generic;
 using MacroExceptions;
 
 namespace Verbot.Commands
 {
-    class ReadCommand : ICommand
+    class ResetCommand : ICommand
     {
 
         readonly Context Context;
 
 
-        public ReadCommand(Context context)
+        public ResetCommand(Context context)
         {
             Context = context;
         }
@@ -23,8 +22,7 @@ namespace Verbot.Commands
                 throw new UserException("Unexpected arguments");
             }
 
-            var version = Context.DiskLocationContext.ReadVersion();
-            Console.Out.WriteLine(version);
+            Context.DiskLocationContext.WriteVersion(Context.DefaultVersion);
 
             return 0;
         }

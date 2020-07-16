@@ -4,13 +4,13 @@ using System;
 
 namespace Verbot.Commands
 {
-    class WriteCommand : ICommand
+    class CalcCommand : ICommand
     {
 
         readonly Context Context;
 
 
-        public WriteCommand(Context context)
+        public CalcCommand(Context context)
         {
             Context = context;
         }
@@ -41,14 +41,15 @@ namespace Verbot.Commands
                 throw new UserException("Can't calculate --release and --prerelease version at the same time");
             }
 
+            var calculatedInfo = Context.CalculationContext.Calculate(Context.RefContext.Head.Target);
+
             var version =
                 release
-                    ? Context.CalculationContext.Calculate(Context.RefContext.Head.Target).CalculatedReleaseVersion
+                    ? calculatedInfo.CalculatedReleaseVersion
                 : prerelease
-                    ? Context.CalculationContext.Calculate(Context.RefContext.Head.Target).CalculatedPrereleaseVersion
-                    : Context.CalculationContext.Calculate(Context.RefContext.Head.Target).Version;
+                    ? calculatedInfo.CalculatedPrereleaseVersion
+                : calculatedInfo.Version;
 
-            Context.DiskLocationContext.WriteVersion(version);
             Console.Out.WriteLine(version);
 
             return 0;

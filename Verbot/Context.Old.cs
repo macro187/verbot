@@ -1,67 +1,28 @@
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using MacroExceptions;
-using System.Diagnostics;
-using System.Collections.Generic;
+using MacroGit;
 using Verbot.LatestBranches;
+using Verbot.MasterBranches;
 using Verbot.Refs;
+using Verbot.Releases;
 
-namespace Verbot.Commands
+namespace Verbot
 {
-    class OldCommands
+    partial class Context
     {
 
-        readonly Context Context;
-
-
-        public OldCommands(Context context)
+        public void CheckNoUncommittedChanges()
         {
-            Context = context;
-        }
-
-
-        public void CheckRemote()
-        {
-            CheckForRemoteBranchesAtUnknownCommits();
-            CheckForRemoteBranchesNotBehindLocal();
-            CheckForIncorrectRemoteTags();
-        }
-
-
-        public void Push(bool dryRun)
-        {
-            CheckNoUncommittedChanges();
-
-            var verbotBranchesWithRemote = GetVerbotBranchesWithRemote();
-            var verbotTagsWithRemote = Context.ReleaseContext.FindReleaseTagsWithRemote();
-
-            CheckForRemoteBranchesAtUnknownCommits();
-            CheckForRemoteBranchesNotBehindLocal();
-            CheckForIncorrectRemoteTags();
-
-            var branchesToPush = verbotBranchesWithRemote.Where(b => b.RemoteTargetSha1 != b.Target.Sha1);
-            var tagsToPush = verbotTagsWithRemote.Where(b => b.RemoteTargetSha1 != b.Target.Sha1);
-            var refsToPush = branchesToPush.Concat(tagsToPush);
-
-            if (!refsToPush.Any())
-            {
-                Trace.TraceInformation("All remote version branches and tags already up-to-date");
-                return;
-            }
-
-            Context.GitRepository.Push(refsToPush.Select(r => r.FullName), dryRun: dryRun, echoOutput: true);
-        }
-
-
-        void CheckNoUncommittedChanges()
-        {
-            if (Context.GitRepository.HasUncommittedChanges())
+            if (GitRepository.HasUncommittedChanges())
                 throw new UserException("Uncommitted changes in repository");
         }
 
 
-        void CheckForIncorrectRemoteTags()
+        public void CheckForIncorrectRemoteTags()
         {
-            var verbotTagsWithRemote = Context.ReleaseContext.FindReleaseTagsWithRemote();
+            var verbotTagsWithRemote = ReleaseContext.FindReleaseTagsWithRemote();
 
             var incorrectRemoteTags =
                 verbotTagsWithRemote
@@ -80,14 +41,14 @@ namespace Verbot.Commands
         }
 
 
-        void CheckForRemoteBranchesAtUnknownCommits()
+        public void CheckForRemoteBranchesAtUnknownCommits()
         {
             var verbotBranchesWithRemote = GetVerbotBranchesWithRemote();
 
             var remoteBranchesAtUnknownCommits =
                 verbotBranchesWithRemote
                     .Where(b => b.RemoteTargetSha1 != null)
-                    .Where(b => !Context.GitRepository.Exists(b.RemoteTargetSha1))
+                    .Where(b => !GitRepository.Exists(b.RemoteTargetSha1))
                     .ToList();
 
             if (!remoteBranchesAtUnknownCommits.Any()) return;
@@ -101,14 +62,14 @@ namespace Verbot.Commands
         }
 
 
-        void CheckForRemoteBranchesNotBehindLocal()
+        public void CheckForRemoteBranchesNotBehindLocal()
         {
             var verbotBranchesWithRemote = GetVerbotBranchesWithRemote();
 
             var remoteBranchesNotBehindLocal =
                 verbotBranchesWithRemote
                     .Where(b => b.RemoteTargetSha1 != null)
-                    .Where(b => !Context.GitRepository.IsAncestor(b.RemoteTargetSha1, b.Target.Sha1))
+                    .Where(b => !GitRepository.IsAncestor(b.RemoteTargetSha1, b.Target.Sha1))
                     .ToList();
 
             if (!remoteBranchesNotBehindLocal.Any()) return;
@@ -124,9 +85,9 @@ namespace Verbot.Commands
 
 
         IEnumerable<RefInfo> VerbotBranches =>
-            Context.RefContext.Branches
+            RefContext.Branches
                 .Where(b =>
-                    Context.MasterBranchContext.CalculateMasterBranchSeries(b) != null ||
+                    MasterBranchContext.CalculateMasterBranchSeries(b) != null ||
                     b.Name == "latest" ||
                     MajorLatestBranchInfo.IsMajorLatestBranchName(b.Name) ||
                     MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name))
@@ -134,7 +95,7 @@ namespace Verbot.Commands
 
 
         public IEnumerable<GitRefWithRemote> GetVerbotBranchesWithRemote() =>
-            Context.RefContext.GetRemoteInfo(VerbotBranches).ToList();
+            RefContext.GetRemoteInfo(VerbotBranches).ToList();
 
     }
 }

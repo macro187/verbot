@@ -13,7 +13,7 @@ using Verbot.Releases;
 
 namespace Verbot
 {
-    class Context
+    partial class Context
     {
 
         public static readonly SemVersion DefaultVersion = new SemVersion(9999, 0, 0, "alpha");
