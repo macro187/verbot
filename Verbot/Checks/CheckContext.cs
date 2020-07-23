@@ -51,8 +51,7 @@ namespace Verbot.Checks
             CheckNoMissingLatestBranches() ??
             CheckLatestBranchesAtCorrectReleases() ??
             CheckNoMissingMasterBranches() ??
-            CheckMasterBranchesInCorrectReleaseSeries() ??
-            CheckMasterBranchesNotBehind() ??
+            CheckMasterBranchesInCorrectPlaces() ??
             null;
 
 
@@ -68,7 +67,9 @@ namespace Verbot.Checks
                 {
                     if (commit.ParentSha1s.Count > 1)
                     {
-                        return Fail($"Merge commit {commit.Sha1}");
+                        return Fail(
+                            $"Merge commit {commit.Sha1}",
+                            "Merge commits in the release history are not supported");
                     }
                 }
             }
@@ -81,7 +82,9 @@ namespace Verbot.Checks
         {
             if (ReleaseContext.FindRelease(new SemVersion(0, 0, 0)) != null)
             {
-                return Fail("Found release 0.0.0");
+                return Fail(
+                    "Found release 0.0.0",
+                    "Delete 0.0.0 release tag");
             }
 
             return null;
@@ -96,7 +99,9 @@ namespace Verbot.Checks
                 {
                     var sha1 = releases.Key.Sha1;
                     var releaseNames = string.Join(", ", releases.Select(t => t.Version));
-                    return Fail($"Multiple releases on commit {sha1}: {releaseNames}");
+                    return Fail(
+                        $"Multiple releases on commit {sha1}: {releaseNames}",
+                        "Multiple releases on the same commit not supported (yet)");
                 }
             }
 
@@ -114,7 +119,9 @@ namespace Verbot.Checks
                 var version = new SemVersion(major, 0, 0);
                 if (ReleaseContext.FindRelease(version) == null)
                 {
-                    return Fail($"Missing release {version}");
+                    return Fail(
+                        $"Missing release {version}",
+                        "Correct revision history manually or give up");
                 }
             }
 
@@ -131,7 +138,9 @@ namespace Verbot.Checks
                     var minorVersion = latestRelease.Version.Change(minor: minor, patch: 0);
                     if (ReleaseContext.FindRelease(minorVersion) == null)
                     {
-                        return Fail($"Missing release {minorVersion}");
+                        return Fail(
+                            $"Missing release {minorVersion}",
+                            "Correct revision history manually or give up");
                     }
                 }
             }
@@ -149,7 +158,9 @@ namespace Verbot.Checks
                     var patchVersion = latestRelease.Version.Change(patch: patch);
                     if (ReleaseContext.FindRelease(patchVersion) == null)
                     {
-                        return Fail($"Missing release {patchVersion}");
+                        return Fail(
+                            $"Missing release {patchVersion}",
+                            "Correct revision history manually or give up");
                     }
                 }
             }
@@ -166,7 +177,9 @@ namespace Verbot.Checks
                 if (previousRelease == null) continue;
                 if (release.Version < previousRelease.Version)
                 {
-                    return Fail($"Release {release.Version} descends from higher {previousRelease.Version}");
+                    return Fail(
+                        $"Release {release.Version} descends from higher {previousRelease.Version}",
+                        "Correct revision history manually or give up");
                 }
             }
 
@@ -184,7 +197,9 @@ namespace Verbot.Checks
                     {
                         var version = release.Version;
                         var previousMajorVersion = release.PreviousMajorRelease.Version;
-                        return Fail($"Release {version} does not descend from {previousMajorVersion}");
+                        return Fail(
+                            $"Release {version} does not descend from {previousMajorVersion}",
+                            "Correct revision history manually or give up");
                     }
                 }
             }
@@ -201,7 +216,9 @@ namespace Verbot.Checks
                 {
                     var version = release.Version;
                     var previousMajorOrMinorVersion = release.PreviousNumericMajorOrMinorRelease.Version;
-                    return Fail($"Release {version} does not descend from {previousMajorOrMinorVersion}");
+                    return Fail(
+                        $"Release {version} does not descend from {previousMajorOrMinorVersion}",
+                        "Correct revision history manually or give up");
                 }
             }
 
@@ -217,7 +234,9 @@ namespace Verbot.Checks
                 {
                     var version = release.Version;
                     var previousVersion = release.PreviousNumericRelease.Version;
-                    return Fail($"Release {version} does not descend from {previousVersion}");
+                    return Fail(
+                        $"Release {version} does not descend from {previousVersion}",
+                        "Correct revision history manually or give up");
                 }
             }
 
@@ -234,7 +253,9 @@ namespace Verbot.Checks
                 {
                     var version = release.Version;
                     var previousVersion = release.PreviousAncestralRelease?.Version ?? "beginning";
-                    return Fail($"No breaking change(s) between {previousVersion} and {version}");
+                    return Fail(
+                        $"No breaking change(s) between {previousVersion} and {version}",
+                        "Correct revision history manually or give up");
                 }
             }
 
@@ -253,13 +274,17 @@ namespace Verbot.Checks
                 if (breakingChange != null)
                 {
                     var sha1 = breakingChange.Sha1;
-                    return Fail($"Breaking change {sha1} between {previousVersion} and {version}");
+                    return Fail(
+                        $"Breaking change {sha1} between {previousVersion} and {version}",
+                        "Correct revision history manually or give up");
                 }
 
                 var featureChange = release.CommitsSincePreviousAncestralRelease.FirstOrDefault(c => c.IsFeature);
                 if (featureChange == null)
                 {
-                    return Fail($"No feature change(s) between {previousVersion} and {version}");
+                    return Fail(
+                        $"No feature change(s) between {previousVersion} and {version}",
+                        "Correct revision history manually or give up");
                 }
             }
 
@@ -278,14 +303,18 @@ namespace Verbot.Checks
                 if (breakingChange != null)
                 {
                     var sha1 = breakingChange.Sha1;
-                    return Fail($"Breaking change {sha1} between {previousVersion} and {version}");
+                    return Fail(
+                        $"Breaking change {sha1} between {previousVersion} and {version}",
+                        "Correct revision history manually or give up");
                 }
 
                 var featureChange = release.CommitsSincePreviousAncestralRelease.FirstOrDefault(c => c.IsFeature);
                 if (featureChange != null)
                 {
                     var sha1 = featureChange.Sha1;
-                    return Fail($"Feature change {sha1} between {previousVersion} and {version}");
+                    return Fail(
+                        $"Feature change {sha1} between {previousVersion} and {version}",
+                        "Correct revision history manually or give up");
                 }
             }
 
@@ -301,7 +330,10 @@ namespace Verbot.Checks
                 var branch = RefContext.FindBranch(name);
                 if (branch == null)
                 {
-                    return Fail($"Missing {name} branch");
+                    var version = branchThatShouldExist.Release.Version;
+                    return Fail(
+                        $"Missing {name} branch",
+                        $"Create {name} branch at {version}");
                 }
             }
 
@@ -320,7 +352,10 @@ namespace Verbot.Checks
                 var correctCommit = branchThatShouldExist.Release.Commit;
                 if (branch.Target != correctCommit)
                 {
-                    return Fail($"{name} branch should be at commit {correctCommit.Sha1}");
+                    var version = branchThatShouldExist.Release.Version;
+                    return Fail(
+                        $"{name} branch should be at {version}",
+                        $"Move {name} branch to {version}");
                 }
             }
 
@@ -334,7 +369,9 @@ namespace Verbot.Checks
             {
                 if (!MasterBranchContext.MasterBranches.Any(b => b.Name == spec.Name))
                 {
-                    return Fail($"Missing {spec.Name} branch");
+                    return Fail(
+                        $"Missing {spec.Name} branch",
+                        $"Create {spec.Name} branch at {spec.Commit.Sha1}");
                 }
             }
 
@@ -342,32 +379,16 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckMasterBranchesInCorrectReleaseSeries()
+        CheckFailure CheckMasterBranchesInCorrectPlaces()
         {
-            foreach (var branch in MasterBranchContext.MasterBranches)
+            foreach (var spec in MasterBranchContext.LatestMasterBranchPoints.OrderBy(spec => spec.Series))
             {
-                var state = CalculationContext.Calculate(branch.Target);
-                if (branch.Series != state.ReleaseSeries)
+                var branch = MasterBranchContext.MasterBranches.Single(b => b.Name == spec.Name);
+                if (branch.Target != spec.Commit)
                 {
-                    return Fail($"{branch.Name} on incorrect release series {state.ReleaseSeries}");
-                }
-            }
-
-            return null;
-        }
-
-
-        CheckFailure CheckMasterBranchesNotBehind()
-        {
-            foreach (var branch in MasterBranchContext.MasterBranches)
-            {
-                var latestKnownPoint = MasterBranchContext.LatestMasterBranchPointsByName[branch.Name];
-                if (!branch.Target.IsDescendentOf(latestKnownPoint.Commit))
-                {
-                    var name = branch.Name;
-                    var series = $"{branch.Series.Major}.{branch.Series.Minor}";
-                    var latestSha1 = latestKnownPoint.Commit.Sha1;
-                    return Fail($"Branch {name} behind latest commit in {series} series {latestSha1}");
+                    return Fail(
+                        $"{branch.Name} at incorrect commit {branch.Target.Sha1}",
+                        $"Move {branch.Name} to {spec.Commit.Sha1} without losing its current commits");
                 }
             }
 

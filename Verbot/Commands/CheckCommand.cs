@@ -24,6 +24,7 @@ namespace Verbot.Commands
             if (failure != null)
             {
                 Trace.TraceError(failure.Description);
+                Trace.TraceInformation(failure.RepairDescription);
                 return 1;
             }
 
