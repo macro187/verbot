@@ -55,7 +55,7 @@ namespace Verbot
             CommitContext = new CommitContext(GitRepository);
             RefContext = new RefContext(GitRepository, CommitContext);
             CalculationContext = new CalculationContext(RefContext);
-            ReleaseContext = new ReleaseContext(RefContext, CalculationContext, GitRepository);
+            ReleaseContext = new ReleaseContext(RefContext);
             LatestBranchContext = new LatestBranchContext(ReleaseContext);
             MasterBranchContext = new MasterBranchContext(ReleaseContext, RefContext, CalculationContext);
             CheckContext = new CheckContext(

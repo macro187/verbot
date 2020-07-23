@@ -65,9 +65,9 @@ namespace Verbot.Checks
             CheckPatchReleaseSemverChanges();
             CheckNoMissingLatestBranches();
             CheckLatestBranchesAtCorrectReleases();
-            CheckNoMissingMasterBranches();
 
             // Error
+            CheckNoMissingMasterBranches();
             CheckMasterBranchesInCorrectReleaseSeries();
 
             // Warn
