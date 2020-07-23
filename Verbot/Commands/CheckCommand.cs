@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using MacroExceptions;
 
 namespace Verbot.Commands
@@ -18,7 +19,14 @@ namespace Verbot.Commands
         public int Run(Queue<string> args)
         {
             if (args.Count > 0) throw new UserException("Unexpected arguments");
-            Context.CheckContext.CheckLocal();
+
+            var failure = Context.CheckContext.CheckLocal();
+            if (failure != null)
+            {
+                Trace.TraceError(failure.Description);
+                return 1;
+            }
+
             return 0;
         }
 
