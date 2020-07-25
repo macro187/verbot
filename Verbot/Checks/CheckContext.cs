@@ -1,6 +1,5 @@
 using System.Linq;
 using MacroSemver;
-using Verbot.Calculations;
 using Verbot.LatestBranches;
 using Verbot.MasterBranches;
 using Verbot.Refs;
@@ -16,46 +15,22 @@ namespace Verbot.Checks
         readonly LatestBranchContext LatestBranchContext;
         readonly ReleaseContext ReleaseContext;
         readonly RefContext RefContext;
-        readonly CalculationContext CalculationContext;
 
 
         public CheckContext(
             MasterBranchContext masterBranchContext,
             LatestBranchContext latestBranchContext,
             ReleaseContext releaseContext,
-            RefContext refContext,
-            CalculationContext calculationContext)
+            RefContext refContext)
         {
             MasterBranchContext = masterBranchContext;
             LatestBranchContext = latestBranchContext;
             ReleaseContext = releaseContext;
             RefContext = refContext;
-            CalculationContext = calculationContext;
         }
 
 
-        public CheckFailure CheckLocal() =>
-            CheckNoMergeCommits() ??
-            CheckNoReleaseZero() ??
-            CheckNoCommitsWithMultipleReleases() ??
-            CheckNoMissingMajorReleases() ??
-            CheckNoMissingMinorReleases() ??
-            CheckNoMissingPatchReleases() ??
-            CheckReleaseOrdering() ??
-            CheckMajorReleaseOrdering() ??
-            CheckMinorReleaseOrdering() ??
-            CheckPatchReleaseOrdering() ??
-            CheckMajorReleaseSemverChanges() ??
-            CheckMinorReleaseSemverChanges() ??
-            CheckPatchReleaseSemverChanges() ??
-            CheckNoMissingLatestBranches() ??
-            CheckLatestBranchesAtCorrectReleases() ??
-            CheckNoMissingMasterBranches() ??
-            CheckMasterBranchesInCorrectPlaces() ??
-            null;
-
-
-        CheckFailure CheckNoMergeCommits()
+        public CheckFailure CheckNoMergeCommits()
         {
             var leaves =
                 ReleaseContext.ReleasesDescending.Select(r => r.Commit)
@@ -78,7 +53,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckNoReleaseZero()
+        public CheckFailure CheckNoReleaseZero()
         {
             if (ReleaseContext.FindRelease(new SemVersion(0, 0, 0)) != null)
             {
@@ -91,7 +66,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckNoCommitsWithMultipleReleases()
+        public CheckFailure CheckNoCommitsWithMultipleReleases()
         {
             foreach (var releases in ReleaseContext.CommitReleaseLookup)
             {
@@ -109,7 +84,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckNoMissingMajorReleases()
+        public CheckFailure CheckNoMissingMajorReleases()
         {
             var latestRelease = ReleaseContext.ReleasesDescending.FirstOrDefault();
             if (latestRelease == null) return null;
@@ -129,7 +104,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckNoMissingMinorReleases()
+        public CheckFailure CheckNoMissingMinorReleases()
         {
             foreach (var latestRelease in ReleaseContext.LatestMajorSeriesReleases)
             {
@@ -149,7 +124,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckNoMissingPatchReleases()
+        public CheckFailure CheckNoMissingPatchReleases()
         {
             foreach (var latestRelease in ReleaseContext.LatestMinorSeriesReleases)
             {
@@ -169,7 +144,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckReleaseOrdering()
+        public CheckFailure CheckReleaseOrdering()
         {
             foreach (var release in ReleaseContext.ReleasesAscending)
             {
@@ -187,7 +162,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckMajorReleaseOrdering()
+        public CheckFailure CheckMajorReleaseOrdering()
         {
             foreach (var release in ReleaseContext.MajorReleases)
             {
@@ -208,7 +183,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckMinorReleaseOrdering()
+        public CheckFailure CheckMinorReleaseOrdering()
         {
             foreach (var release in ReleaseContext.MinorReleases)
             {
@@ -226,7 +201,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckPatchReleaseOrdering()
+        public CheckFailure CheckPatchReleaseOrdering()
         {
             foreach (var release in ReleaseContext.PatchReleases)
             {
@@ -244,7 +219,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckMajorReleaseSemverChanges()
+        public CheckFailure CheckMajorReleaseSemverChanges()
         {
             foreach (var release in ReleaseContext.MajorReleases)
             {
@@ -263,7 +238,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckMinorReleaseSemverChanges()
+        public CheckFailure CheckMinorReleaseSemverChanges()
         {
             foreach (var release in ReleaseContext.MinorReleases)
             {
@@ -292,7 +267,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckPatchReleaseSemverChanges()
+        public CheckFailure CheckPatchReleaseSemverChanges()
         {
             foreach (var release in ReleaseContext.PatchReleases)
             {
@@ -322,7 +297,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckNoMissingLatestBranches()
+        public CheckFailure CheckNoMissingLatestBranches()
         {
             foreach (var branchThatShouldExist in LatestBranchContext.GetLatestBranchesThatShouldExist())
             {
@@ -341,7 +316,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckLatestBranchesAtCorrectReleases()
+        public CheckFailure CheckLatestBranchesAtCorrectReleases()
         {
             foreach (var branchThatShouldExist in LatestBranchContext.GetLatestBranchesThatShouldExist())
             {
@@ -363,7 +338,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckNoMissingMasterBranches()
+        public CheckFailure CheckNoMissingMasterBranches()
         {
             foreach (var spec in MasterBranchContext.LatestMasterBranchPoints.OrderBy(spec => spec.Series))
             {
@@ -379,7 +354,7 @@ namespace Verbot.Checks
         }
 
 
-        CheckFailure CheckMasterBranchesInCorrectPlaces()
+        public CheckFailure CheckMasterBranchesInCorrectPlaces()
         {
             foreach (var spec in MasterBranchContext.LatestMasterBranchPoints.OrderBy(spec => spec.Series))
             {
