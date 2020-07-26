@@ -12,7 +12,7 @@ namespace Verbot.Refs
         readonly GitRef Ref;
 
 
-        public RefInfo(RefContext refContext, CommitContext commitContext, GitRef @ref)
+        protected RefInfo(RefContext refContext, CommitContext commitContext, GitRef @ref)
         {
             Guard.NotNull(refContext, nameof(refContext));
             Guard.NotNull(commitContext, nameof(commitContext));
@@ -26,11 +26,18 @@ namespace Verbot.Refs
 
         public GitRefNameComponent Name => Ref.Name;
         public GitFullRefName FullName => Ref.FullName;
-        public bool IsBranch => Ref.IsBranch;
-        public bool IsTag => Ref.IsTag;
         public GitSha1 TargetSha1 => Ref.Target;
         public CommitInfo Target => CommitContext.GetCommit(TargetSha1);
         public RefInfo SymbolicTarget => RefContext.FindSymbolicRefTarget(this);
+
+
+        public static RefInfo Create(RefContext refContext, CommitContext commitContext, GitRef @ref) =>
+            SeriesMasterBranchInfo.TryCreate(refContext, commitContext, @ref) ??
+            TheMasterBranchInfo.TryCreate(refContext, commitContext, @ref) ??
+            ReleaseTagInfo.TryCreate(refContext, commitContext, @ref) ??
+            TagInfo.TryCreate(refContext, commitContext, @ref) ??
+            BranchInfo.TryCreate(refContext, commitContext, @ref) ??
+            new RefInfo(refContext, commitContext, @ref);
 
     }
 }

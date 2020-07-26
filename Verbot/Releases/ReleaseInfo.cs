@@ -13,19 +13,19 @@ namespace Verbot.Releases
         readonly ReleaseContext ReleaseContext;
 
 
-        public ReleaseInfo(ReleaseContext releaseContext, ReleaseTagInfo tagInfo)
+        public ReleaseInfo(ReleaseContext releaseContext, ReleaseTagInfo tag)
         {
             Guard.NotNull(releaseContext, nameof(releaseContext));
-            Guard.NotNull(tagInfo, nameof(tagInfo));
+            Guard.NotNull(tag, nameof(tag));
 
             ReleaseContext = releaseContext;
-            Version = tagInfo.Version;
-            Tag = tagInfo.Ref;
+            Version = tag.Version;
+            Tag = tag;
         }
 
 
         public SemVersion Version { get; }
-        public RefInfo Tag { get; }
+        public ReleaseTagInfo Tag { get; }
         public CommitInfo Commit => Tag.Target;
         public bool IsMajor => Version.Minor == 0 && Version.Patch == 0;
         public bool IsMinor => Version.Minor > 0 && Version.Patch == 0;

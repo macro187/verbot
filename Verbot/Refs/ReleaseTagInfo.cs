@@ -1,32 +1,32 @@
-using System;
+using MacroGit;
 using MacroGuards;
 using MacroSemver;
+using Verbot.Commits;
 
 namespace Verbot.Refs
 {
-    class ReleaseTagInfo
+    class ReleaseTagInfo : TagInfo
     {
 
-        public ReleaseTagInfo(SemVersion version, RefInfo @ref)
+        protected ReleaseTagInfo(RefContext refContext, CommitContext commitContext, GitRef @ref, SemVersion version)
+            : base(refContext, commitContext, @ref)
         {
-            Guard.NotNull(version, nameof(version));
-            if (version.Prerelease != "" || version.Build != "")
-            {
-                throw new ArgumentException("Not a release version", nameof(version));
-            }
-            Guard.NotNull(@ref, nameof(@ref));
-            if (!@ref.IsTag)
-            {
-                throw new ArgumentException("Not a tag", nameof(@ref));
-            }
-
             Version = version;
-            Ref = @ref;
         }
 
 
         public SemVersion Version { get; }
-        public RefInfo Ref { get; }
+
+
+        public new static ReleaseTagInfo TryCreate(RefContext refContext, CommitContext commitContext, GitRef @ref)
+        {
+            Guard.NotNull(@ref, nameof(@ref));
+            if (!@ref.IsTag) return null;
+            if (!SemVersion.TryParse(@ref.Name, out var version)) return null;
+            if (version.Prerelease != "") return null;
+            if (version.Build != "") return null;
+            return new ReleaseTagInfo(refContext, commitContext, @ref, version);
+        }
 
     }
 }

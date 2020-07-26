@@ -17,8 +17,8 @@ namespace Verbot.Refs
         public GitRefNameComponent Name => Ref.Name;
         public GitFullRefName FullName => Ref.FullName;
         public CommitInfo Target => Ref.Target;
-        public bool IsBranch => Ref.IsBranch;
-        public bool IsTag => Ref.IsTag;
+        public bool IsBranch => Ref is BranchInfo;
+        public bool IsTag => Ref is TagInfo;
         public GitSha1 RemoteTargetSha1 { get; }
 
     }

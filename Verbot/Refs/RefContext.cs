@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using MacroGit;
-using MacroSemver;
 using MacroCollections;
 using Verbot.Commits;
 
@@ -22,9 +21,6 @@ namespace Verbot.Refs
 
 
         IEnumerable<RefInfo> RefsCache;
-        IEnumerable<RefInfo> TagsCache;
-        IEnumerable<RefInfo> BranchesCache;
-        IEnumerable<ReleaseTagInfo> ReleaseTagCache;
         ILookup<CommitInfo, ReleaseTagInfo> CommitReleaseTagLookupCache;
         IDictionary<RefInfo, RefInfo> SymbolicRefTargetsCache = new Dictionary<RefInfo, RefInfo>();
 
@@ -32,7 +28,7 @@ namespace Verbot.Refs
         public IEnumerable<RefInfo> Refs =>
             RefsCache ?? (RefsCache =
                 GitRepository.GetRefs()
-                    .Select(r => new RefInfo(this, CommitContext, r))
+                    .Select(r => RefInfo.Create(this, CommitContext, r))
                     .ToList());
 
 
@@ -49,34 +45,21 @@ namespace Verbot.Refs
             });
 
 
-        public IEnumerable<RefInfo> Tags =>
-            TagsCache ?? (TagsCache =
-                Refs.Where(r => r.IsTag).ToList());
+        public IEnumerable<TagInfo> Tags =>
+            Refs.OfType<TagInfo>();
 
 
-        public IEnumerable<RefInfo> Branches =>
-            BranchesCache ?? (BranchesCache =
-                Refs.Where(r => r.IsBranch).ToList());
+        public IEnumerable<BranchInfo> Branches =>
+            Refs.OfType<BranchInfo>();
 
 
         public IEnumerable<ReleaseTagInfo> ReleaseTags =>
-            ReleaseTagCache ?? (ReleaseTagCache =
-                Tags
-                    .Select(tag =>
-                    {
-                        SemVersion.TryParse(tag.Name, out var version, true);
-                        return (Ref: tag, Version: version);
-                    })
-                    .Where(tag => tag.Version != null)
-                    .Where(tag => tag.Version.Prerelease == "")
-                    .Where(tag => tag.Version.Build == "")
-                    .Select(tag => new ReleaseTagInfo(tag.Version, tag.Ref))
-                    .ToList());
+            Refs.OfType<ReleaseTagInfo>();
 
 
         ILookup<CommitInfo, ReleaseTagInfo> CommitReleaseTagLookup =>
             CommitReleaseTagLookupCache ?? (CommitReleaseTagLookupCache =
-                ReleaseTags.ToLookup(tag => tag.Ref.Target));
+                ReleaseTags.ToLookup(tag => tag.Target));
 
 
         public IEnumerable<ReleaseTagInfo> GetReleaseTags(CommitInfo commit) =>
@@ -89,9 +72,8 @@ namespace Verbot.Refs
             Branches.Where(b => b.Name == name).SingleOrDefault();
 
 
-        // IEnumerable<RefInfo> MasterBranches =>
-        //     Branches
-        //         .Where(branch => IsMasterBranchName(branch.Name));
+        public IEnumerable<MasterBranchInfo> MasterBranches =>
+            Refs.OfType<MasterBranchInfo>();
 
 
         public IEnumerable<GitRefWithRemote> GetRemoteInfo(IEnumerable<RefInfo> refs)
@@ -103,14 +85,6 @@ namespace Verbot.Refs
 
             return refs.Select(r => new GitRefWithRemote(r, LookupRemoteTarget(r.FullName)));
         }
-
-
-        // static bool IsMasterBranchName(string name)
-        // {
-        //     if (name == "master") return true;
-        //     if (Regex.IsMatch(name, @"^(\d+)\.(\d+)-master$")) return true;
-        //     return false;
-        // }
 
     }
 }

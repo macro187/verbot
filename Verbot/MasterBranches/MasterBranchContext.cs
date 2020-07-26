@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -110,10 +109,9 @@ namespace Verbot.MasterBranches
         }
 
 
-        public SemVersion CalculateMasterBranchSeries(RefInfo @ref)
+        public SemVersion CalculateMasterBranchSeries(BranchInfo @ref)
         {
             Guard.NotNull(@ref, nameof(@ref));
-            if (!@ref.IsBranch) throw new ArgumentException("Not a branch", nameof(@ref));
 
             if (@ref.Name == "master")
             {
