@@ -36,13 +36,13 @@ namespace Verbot.MasterBranches
 
 
         public IEnumerable<MasterBranchSpec> LatestMasterBranchPoints =>
-            LatestMasterBranchPointsCache ?? (LatestMasterBranchPointsCache =
-                FindLatestMasterBranchPoints());
+            LatestMasterBranchPointsCache ??=
+                FindLatestMasterBranchPoints();
 
 
         public IReadOnlyDictionary<GitRefNameComponent, MasterBranchSpec> LatestMasterBranchPointsByName =>
-            LatestMasterBranchPointsByNameCache ?? (LatestMasterBranchPointsByNameCache =
-                LatestMasterBranchPoints.ToDictionary(b => b.Name, b => b));
+            LatestMasterBranchPointsByNameCache ??=
+                LatestMasterBranchPoints.ToDictionary(b => b.Name, b => b);
 
 
         IEnumerable<MasterBranchSpec> FindLatestMasterBranchPoints()

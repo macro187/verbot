@@ -25,16 +25,16 @@ namespace Verbot.Releases
 
 
         public IEnumerable<ReleaseInfo> ReleasesAscending =>
-            ReleasesAscendingCache ?? (ReleasesAscendingCache =
+            ReleasesAscendingCache ??=
                 RefContext.ReleaseTags
                     .Select(tag => new ReleaseInfo(this, tag))
                     .OrderBy(release => release.Version)
-                    .ToList());
+                    .ToList();
 
 
         public IEnumerable<ReleaseInfo> ReleasesDescending =>
-            ReleasesDescendingCache ?? (ReleasesDescendingCache =
-                ReleasesAscending.Reverse().ToList());
+            ReleasesDescendingCache ??=
+                ReleasesAscending.Reverse().ToList();
 
 
         public ReleaseInfo LatestRelease =>
@@ -68,13 +68,13 @@ namespace Verbot.Releases
 
 
         public ILookup<CommitInfo, ReleaseInfo> CommitReleaseLookup =>
-            CommitReleaseLookupCache ?? (CommitReleaseLookupCache =
-                ReleasesDescending.ToLookup(t => t.Commit));
+            CommitReleaseLookupCache ??=
+                ReleasesDescending.ToLookup(t => t.Commit);
 
 
         IDictionary<SemVersion, ReleaseInfo> VersionReleaseLookup =>
-            VersionReleaseLookupCache ?? (VersionReleaseLookupCache =
-                ReleasesDescending.ToDictionary(t => t.Version));
+            VersionReleaseLookupCache ??=
+                ReleasesDescending.ToDictionary(t => t.Version);
 
 
         public ReleaseInfo GetRelease(SemVersion version) =>

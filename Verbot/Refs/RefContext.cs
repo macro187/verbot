@@ -26,10 +26,10 @@ namespace Verbot.Refs
 
 
         public IEnumerable<RefInfo> Refs =>
-            RefsCache ?? (RefsCache =
+            RefsCache ??=
                 GitRepository.GetRefs()
                     .Select(r => RefInfo.Create(this, CommitContext, r))
-                    .ToList());
+                    .ToList();
 
 
         public RefInfo Head =>
@@ -58,8 +58,8 @@ namespace Verbot.Refs
 
 
         ILookup<CommitInfo, ReleaseTagInfo> CommitReleaseTagLookup =>
-            CommitReleaseTagLookupCache ?? (CommitReleaseTagLookupCache =
-                ReleaseTags.ToLookup(tag => tag.Target));
+            CommitReleaseTagLookupCache ??=
+                ReleaseTags.ToLookup(tag => tag.Target);
 
 
         public IEnumerable<ReleaseTagInfo> GetReleaseTags(CommitInfo commit) =>
