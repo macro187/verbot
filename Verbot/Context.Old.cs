@@ -86,11 +86,7 @@ namespace Verbot
 
         IEnumerable<RefInfo> VerbotBranches =>
             RefContext.Branches
-                .Where(b =>
-                    MasterBranchContext.CalculateMasterBranchSeries(b) != null ||
-                    b.Name == "latest" ||
-                    MajorLatestBranchInfo.IsMajorLatestBranchName(b.Name) ||
-                    MajorMinorLatestBranchInfo.IsMajorMinorLatestBranchName(b.Name))
+                .Where(b => b is MasterBranchInfo || b is LatestBranchInfo)
                 .ToList();
 
 

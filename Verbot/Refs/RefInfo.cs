@@ -32,7 +32,10 @@ namespace Verbot.Refs
 
 
         public static RefInfo Create(RefContext refContext, CommitContext commitContext, GitRef @ref) =>
-            SeriesMasterBranchInfo.TryCreate(refContext, commitContext, @ref) ??
+            MajorLatestBranchInfo.TryCreate(refContext, commitContext, @ref) ??
+            MinorLatestBranchInfo.TryCreate(refContext, commitContext, @ref) ??
+            TheLatestBranchInfo.TryCreate(refContext, commitContext, @ref) ??
+            MinorMasterBranchInfo.TryCreate(refContext, commitContext, @ref) ??
             TheMasterBranchInfo.TryCreate(refContext, commitContext, @ref) ??
             ReleaseTagInfo.TryCreate(refContext, commitContext, @ref) ??
             TagInfo.TryCreate(refContext, commitContext, @ref) ??

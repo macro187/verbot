@@ -34,7 +34,7 @@ namespace Verbot.Checks
         {
             var leaves =
                 ReleaseContext.ReleasesDescending.Select(r => r.Commit)
-                .Concat(MasterBranchContext.MasterBranches.Select(b => b.Target));
+                .Concat(RefContext.MasterBranches.Select(b => b.Target));
 
             foreach (var leaf in leaves)
             {
@@ -342,7 +342,7 @@ namespace Verbot.Checks
         {
             foreach (var spec in MasterBranchContext.LatestMasterBranchPoints.OrderBy(spec => spec.Series))
             {
-                if (!MasterBranchContext.MasterBranches.Any(b => b.Name == spec.Name))
+                if (!RefContext.MasterBranches.Any(b => b.Name == spec.Name))
                 {
                     return Fail(
                         $"Missing {spec.Name} branch",
@@ -358,7 +358,7 @@ namespace Verbot.Checks
         {
             foreach (var spec in MasterBranchContext.LatestMasterBranchPoints.OrderBy(spec => spec.Series))
             {
-                var branch = MasterBranchContext.MasterBranches.Single(b => b.Name == spec.Name);
+                var branch = RefContext.MasterBranches.Single(b => b.Name == spec.Name);
                 if (branch.Target != spec.Commit)
                 {
                     return Fail(

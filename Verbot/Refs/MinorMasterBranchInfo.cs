@@ -6,10 +6,10 @@ using Verbot.Commits;
 
 namespace Verbot.Refs
 {
-    class SeriesMasterBranchInfo : MasterBranchInfo
+    class MinorMasterBranchInfo : MasterBranchInfo
     {
 
-        protected SeriesMasterBranchInfo(
+        protected MinorMasterBranchInfo(
             RefContext refContext,
             CommitContext commitContext,
             GitRef @ref,
@@ -24,7 +24,7 @@ namespace Verbot.Refs
         public SemVersion Series { get; }
 
 
-        public new static SeriesMasterBranchInfo TryCreate(
+        public new static MinorMasterBranchInfo TryCreate(
             RefContext refContext,
             CommitContext commitContext,
             GitRef @ref)
@@ -36,7 +36,7 @@ namespace Verbot.Refs
             var major = int.Parse(match.Groups[1].Value);
             var minor = int.Parse(match.Groups[2].Value);
             var series = new SemVersion(major, minor);
-            return new SeriesMasterBranchInfo(refContext, commitContext, @ref, series);
+            return new MinorMasterBranchInfo(refContext, commitContext, @ref, series);
         }
 
     }

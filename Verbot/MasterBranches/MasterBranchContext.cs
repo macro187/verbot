@@ -31,19 +31,8 @@ namespace Verbot.MasterBranches
         }
 
 
-        IEnumerable<MasterBranchInfo> MasterBranchesCache;
         IEnumerable<MasterBranchSpec> LatestMasterBranchPointsCache;
         IReadOnlyDictionary<GitRefNameComponent, MasterBranchSpec> LatestMasterBranchPointsByNameCache;
-
-
-        public IEnumerable<MasterBranchInfo> MasterBranches =>
-            MasterBranchesCache ?? (MasterBranchesCache =
-                RefContext.Branches
-                    .Select(b => (Ref: b, Series: CalculateMasterBranchSeries(b)))
-                    .Where(b => b.Series != null)
-                    .Select(b => new MasterBranchInfo(b.Ref, b.Series))
-                    .OrderByDescending(b => b.Series)
-                    .ToList());
 
 
         public IEnumerable<MasterBranchSpec> LatestMasterBranchPoints =>
@@ -59,11 +48,10 @@ namespace Verbot.MasterBranches
         IEnumerable<MasterBranchSpec> FindLatestMasterBranchPoints()
         {
             var leaves =
-                ReleaseContext.ReleasesDescending
-                    .Select(r => r.Commit)
-                .Concat(MasterBranches
-                    .Select(b => b.Target))
-                .ToList();
+                Enumerable.Empty<CommitInfo>()
+                    .Concat(ReleaseContext.ReleasesDescending.Select(r => r.Commit))
+                    .Concat(RefContext.MasterBranches.Select(b => b.Target))
+                    .ToList();
 
             foreach (var leaf in leaves)
             {
