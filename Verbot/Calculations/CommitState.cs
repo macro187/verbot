@@ -4,7 +4,7 @@ using Verbot.Refs;
 
 namespace Verbot.Calculations
 {
-    class CalculatedCommitInfo
+    class CommitState
     {
 
         public CommitInfo Commit { get; set; }

@@ -41,14 +41,14 @@ namespace Verbot.Commands
                 throw new UserException("Can't calculate --release and --prerelease version at the same time");
             }
 
-            var calculatedInfo = Context.CalculationContext.Calculate(Context.RefContext.Head.Target);
+            var state = Context.CalculationContext.Calculate(Context.RefContext.Head.Target);
 
             var version =
                 release
-                    ? calculatedInfo.CalculatedReleaseVersion
+                    ? state.CalculatedReleaseVersion
                 : prerelease
-                    ? calculatedInfo.CalculatedPrereleaseVersion
-                : calculatedInfo.Version;
+                    ? state.CalculatedPrereleaseVersion
+                : state.Version;
 
             Console.Out.WriteLine(version);
 

@@ -10,6 +10,7 @@ namespace Verbot.Calculations
     {
 
         readonly RefContext RefContext;
+        readonly IDictionary<CommitInfo, CommitState> CommitStateCache = new Dictionary<CommitInfo, CommitState>();
 
 
         public CalculationContext(RefContext refContext)
@@ -18,32 +19,28 @@ namespace Verbot.Calculations
         }
 
 
-        IDictionary<CommitInfo, CalculatedCommitInfo> CalculatedCommitInfoCache =
-            new Dictionary<CommitInfo, CalculatedCommitInfo>();
-
-
-        public CalculatedCommitInfo Calculate(CommitInfo commit) =>
-            CalculatedCommitInfoCache.TryGetValue(commit, out var state)
+        public CommitState Calculate(CommitInfo commit) =>
+            CommitStateCache.TryGetValue(commit, out var state)
                 ? state
                 : CalculateTo(commit);
 
 
-        public CalculatedCommitInfo CalculateTo(CommitInfo to) =>
+        public CommitState CalculateTo(CommitInfo to) =>
             to.GetCommitsSince(null)
                 .Aggregate(
-                    new CalculatedCommitInfo()
+                    new CommitState()
                     {
                         Minor = 1,
                     },
                     (previousState, commit) =>
-                        CalculatedCommitInfoCache.ContainsKey(commit)
-                            ? CalculatedCommitInfoCache[commit]
-                            : CalculatedCommitInfoCache[commit] = Calculate(commit, previousState));
+                        CommitStateCache.ContainsKey(commit)
+                            ? CommitStateCache[commit]
+                            : CommitStateCache[commit] = Calculate(commit, previousState));
 
 
-        CalculatedCommitInfo Calculate(CommitInfo commit, CalculatedCommitInfo previousState)
+        CommitState Calculate(CommitInfo commit, CommitState previousState)
         {
-            var state = new CalculatedCommitInfo
+            var state = new CommitState
             {
                 Commit =
                     commit,
