@@ -105,11 +105,9 @@ Commands
         Check basic assumptions about the local repository required for verbot
         to operate.
 
-        Specifically:
-            There is at least one place in the repository to record the
-            current version.
-
-            Different versions are not recorded in different places.
+    repair
+        Check basic assumptions about the local repository required for verbot
+        to operate and, where possible, automatically correct problems.
 
     check-remote
         Check basic assumptions about the remote repsitory required for verbot

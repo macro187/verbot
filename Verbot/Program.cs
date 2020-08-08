@@ -69,6 +69,7 @@ namespace Verbot
                 "push" => new PushCommand(context),
                 "check" => new CheckCommand(context),
                 "check-remote" => new CheckRemoteCommand(context),
+                "repair" => new RepairCommand(context),
                 _ => throw new UserException("Unrecognised command: " + commandName),
             };
 

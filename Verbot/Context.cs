@@ -27,7 +27,7 @@ namespace Verbot
             Guard.NotNull(gitRepository, nameof(gitRepository));
             Verbose = verbose;
             GitRepository = gitRepository;
-            BuildContexts();
+            ResetContexts();
         }
 
 
@@ -49,10 +49,10 @@ namespace Verbot
         }
 
 
-        void BuildContexts()
+        public void ResetContexts()
         {
+            CommitContext ??= new CommitContext(GitRepository);
             DiskLocationContext = new DiskLocationContext(GitRepository);
-            CommitContext = new CommitContext(GitRepository);
             RefContext = new RefContext(GitRepository, CommitContext);
             CalculationContext = new CalculationContext(RefContext);
             ReleaseContext = new ReleaseContext(RefContext);

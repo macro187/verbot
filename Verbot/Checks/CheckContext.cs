@@ -30,6 +30,27 @@ namespace Verbot.Checks
         }
 
 
+        public CheckFailure Check() =>
+            CheckNoMergeCommits() ??
+            CheckNoReleaseZero() ??
+            CheckNoCommitsWithMultipleReleases() ??
+            CheckNoMissingMajorReleases() ??
+            CheckNoMissingMinorReleases() ??
+            CheckNoMissingPatchReleases() ??
+            CheckReleaseOrdering() ??
+            CheckMajorReleaseOrdering() ??
+            CheckMinorReleaseOrdering() ??
+            CheckPatchReleaseOrdering() ??
+            CheckMajorReleaseSemverChanges() ??
+            CheckMinorReleaseSemverChanges() ??
+            CheckPatchReleaseSemverChanges() ??
+            CheckNoMissingLatestBranches() ??
+            CheckLatestBranchesAtCorrectReleases() ??
+            CheckNoMissingMasterBranches() ??
+            CheckMasterBranchesInCorrectPlaces() ??
+            null;
+
+
         public CheckFailure CheckNoMergeCommits()
         {
             var leaves =

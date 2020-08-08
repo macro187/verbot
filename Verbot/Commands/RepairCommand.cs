@@ -1,17 +1,16 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using MacroExceptions;
-using Verbot.Checks;
 
 namespace Verbot.Commands
 {
-    class CheckCommand : ICommand
+    class RepairCommand : ICommand
     {
 
         readonly Context Context;
 
 
-        public CheckCommand(Context context)
+        public RepairCommand(Context context)
         {
             Context = context;
         }
@@ -26,14 +25,17 @@ namespace Verbot.Commands
                 var failure = Context.CheckContext.Check();
                 if (failure == null) return 0;
 
-                Trace.TraceError(failure.Description);
-                if (failure.Repair != null)
+                if (failure.Repair == null)
                 {
-                    Trace.TraceInformation("Repair available which would:");
+                    Trace.TraceError(failure.Description);
+                    Trace.TraceInformation(failure.RepairDescription);
+                    return 1;
                 }
-                Trace.TraceInformation(failure.RepairDescription);
 
-                return 1;
+                Trace.TraceInformation(failure.Description);
+                Trace.TraceInformation(failure.RepairDescription);
+                failure.Repair();
+                Context.ResetContexts();
             }
         }
 
