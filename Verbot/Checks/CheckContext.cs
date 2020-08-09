@@ -1,4 +1,5 @@
 using System.Linq;
+using MacroGit;
 using MacroSemver;
 using Verbot.LatestBranches;
 using Verbot.MasterBranches;
@@ -11,6 +12,7 @@ namespace Verbot.Checks
     class CheckContext
     {
 
+        readonly GitRepository GitRepository;
         readonly MasterBranchContext MasterBranchContext;
         readonly LatestBranchContext LatestBranchContext;
         readonly ReleaseContext ReleaseContext;
@@ -18,11 +20,13 @@ namespace Verbot.Checks
 
 
         public CheckContext(
+            GitRepository gitRepository,
             MasterBranchContext masterBranchContext,
             LatestBranchContext latestBranchContext,
             ReleaseContext releaseContext,
             RefContext refContext)
         {
+            GitRepository = gitRepository;
             MasterBranchContext = masterBranchContext;
             LatestBranchContext = latestBranchContext;
             ReleaseContext = releaseContext;
@@ -76,11 +80,15 @@ namespace Verbot.Checks
 
         public CheckFailure CheckNoReleaseZero()
         {
-            if (ReleaseContext.FindRelease(new SemVersion(0, 0, 0)) != null)
+            var releaseZero = ReleaseContext.FindRelease(new SemVersion(0, 0, 0));
+            if (releaseZero != null)
             {
                 return Fail(
-                    "Found release 0.0.0",
-                    "Delete 0.0.0 release tag");
+                    "Found invalid release 0.0.0",
+                    $"Deleting {releaseZero.Tag.Name} release tag from {releaseZero.Commit.Sha1}",
+                    () => {
+                        GitRepository.DeleteTag(releaseZero.Tag.Name);
+                    });
             }
 
             return null;

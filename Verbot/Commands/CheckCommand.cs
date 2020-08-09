@@ -29,7 +29,7 @@ namespace Verbot.Commands
                 Trace.TraceError(failure.Description);
                 if (failure.Repair != null)
                 {
-                    Trace.TraceInformation("Repair available which would:");
+                    Trace.TraceInformation("Repair command can fix this by:");
                 }
                 Trace.TraceInformation(failure.RepairDescription);
 

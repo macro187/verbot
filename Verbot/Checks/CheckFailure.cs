@@ -6,9 +6,9 @@ namespace Verbot.Checks
     class CheckFailure
     {
 
-        public static CheckFailure Fail(string description, string repairDescription)
+        public static CheckFailure Fail(string description, string repairDescription, Action repair = null)
         {
-            return new CheckFailure(description, repairDescription);
+            return new CheckFailure(description, repairDescription, repair);
         }
 
 
