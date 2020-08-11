@@ -32,9 +32,22 @@ namespace Verbot.Releases
         public bool IsPatch => Version.Patch > 0;
 
 
-        public ReleaseInfo PreviousNumericRelease =>
+        public ReleaseInfo PreviousRelease =>
             ReleaseContext.ReleasesDescending
                 .Where(r => r.Version < Version)
+                .FirstOrDefault();
+
+
+        public ReleaseInfo PreviousMajorRelease =>
+            IsMajor
+                ? ReleaseContext.FindRelease(new SemVersion(Version.Major - 1, 0, 0))
+                : ReleaseContext.FindRelease(Version.Change(minor: 0, patch: 0));
+
+
+        public ReleaseInfo PreviousMajorOrMinorRelease =>
+            ReleaseContext.ReleasesDescending
+                .Where(r => r.Version < Version)
+                .Where(r => r.IsMajor || r.IsMinor)
                 .FirstOrDefault();
 
 
@@ -46,19 +59,6 @@ namespace Verbot.Releases
                         .OrderBy(r => r.Version)
                         .LastOrDefault())
                 .FirstOrDefault(r => r != null);
-
-
-        public ReleaseInfo PreviousMajorRelease =>
-            IsMajor
-                ? ReleaseContext.FindRelease(new SemVersion(Version.Major - 1, 0, 0))
-                : ReleaseContext.FindRelease(Version.Change(minor: 0, patch: 0));
-
-
-        public ReleaseInfo PreviousNumericMajorOrMinorRelease =>
-            ReleaseContext.ReleasesDescending
-                .Where(r => r.Version < Version)
-                .Where(r => r.IsMajor || r.IsMinor)
-                .FirstOrDefault();
 
 
         public IEnumerable<CommitInfo> CommitsSincePreviousAncestralRelease =>

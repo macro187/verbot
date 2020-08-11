@@ -216,10 +216,10 @@ namespace Verbot.Checks
         {
             foreach (var release in ReleaseContext.MinorReleases)
             {
-                if (!release.Commit.IsDescendentOf(release.PreviousNumericMajorOrMinorRelease.Commit))
+                if (!release.Commit.IsDescendentOf(release.PreviousMajorOrMinorRelease.Commit))
                 {
                     var version = release.Version;
-                    var previousMajorOrMinorVersion = release.PreviousNumericMajorOrMinorRelease.Version;
+                    var previousMajorOrMinorVersion = release.PreviousMajorOrMinorRelease.Version;
                     return Fail(
                         $"Release {version} does not descend from {previousMajorOrMinorVersion}",
                         "Correct revision history manually or give up");
@@ -234,10 +234,10 @@ namespace Verbot.Checks
         {
             foreach (var release in ReleaseContext.PatchReleases)
             {
-                if (!release.Commit.IsDescendentOf(release.PreviousNumericRelease.Commit))
+                if (!release.Commit.IsDescendentOf(release.PreviousRelease.Commit))
                 {
                     var version = release.Version;
-                    var previousVersion = release.PreviousNumericRelease.Version;
+                    var previousVersion = release.PreviousRelease.Version;
                     return Fail(
                         $"Release {version} does not descend from {previousVersion}",
                         "Correct revision history manually or give up");
