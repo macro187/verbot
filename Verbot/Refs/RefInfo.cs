@@ -28,7 +28,7 @@ namespace Verbot.Refs
         public GitFullRefName FullName => Ref.FullName;
         public GitSha1 TargetSha1 => Ref.Target;
         public CommitInfo Target => CommitContext.GetCommit(TargetSha1);
-        public RefInfo SymbolicTarget => RefContext.FindSymbolicRefTarget(this);
+        public BranchInfo SymbolicTarget => RefContext.FindSymbolicRefTarget(this);
 
 
         public static RefInfo Create(RefContext refContext, CommitContext commitContext, GitRef @ref) =>

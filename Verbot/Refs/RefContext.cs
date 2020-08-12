@@ -22,7 +22,7 @@ namespace Verbot.Refs
 
         IEnumerable<RefInfo> RefsCache;
         ILookup<CommitInfo, ReleaseTagInfo> CommitReleaseTagLookupCache;
-        IDictionary<RefInfo, RefInfo> SymbolicRefTargetsCache = new Dictionary<RefInfo, RefInfo>();
+        IDictionary<RefInfo, BranchInfo> SymbolicRefTargetsCache = new Dictionary<RefInfo, BranchInfo>();
 
 
         public IEnumerable<RefInfo> Refs =>
@@ -36,12 +36,16 @@ namespace Verbot.Refs
             Refs.SingleOrDefault(r => r.FullName == "HEAD");
 
 
-        public RefInfo FindSymbolicRefTarget(RefInfo @ref) =>
+        public BranchInfo FindSymbolicRefTarget(RefInfo @ref) =>
             SymbolicRefTargetsCache.GetOrAdd(@ref, () =>
             {
-                var name = GitRepository.FindSymbolicRefTarget(@ref.FullName);
-                if (name == null) return null;
-                return Refs.Where(r => r.FullName == name).SingleOrDefault();
+                var fullName = GitRepository.FindSymbolicRefTarget(@ref.FullName);
+                if (fullName == null) return null;
+                return
+                    Refs
+                        .Where(r => r.FullName == fullName)
+                        .Cast<BranchInfo>()
+                        .SingleOrDefault();
             });
 
 

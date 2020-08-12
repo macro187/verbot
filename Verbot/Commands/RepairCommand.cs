@@ -1,6 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using MacroExceptions;
+using Verbot.Commits;
+using Verbot.Refs;
 
 namespace Verbot.Commands
 {
@@ -8,6 +12,7 @@ namespace Verbot.Commands
     {
 
         readonly Context Context;
+        bool WasOnMasterBranch;
 
 
         public RepairCommand(Context context)
@@ -34,9 +39,37 @@ namespace Verbot.Commands
 
                 Trace.TraceInformation(failure.Description);
                 Trace.TraceInformation(failure.RepairDescription);
+
+                ReleaseBranch();
                 failure.Repair();
                 Context.ResetContexts();
+                RestoreBranch();
             }
+        }
+
+
+        void ReleaseBranch()
+        {
+            var branch = Context.RefContext.Head.SymbolicTarget;
+            if (branch == null) return;
+            if (!(branch is MasterBranchInfo)) return;
+            WasOnMasterBranch = true;
+            Context.GitRepository.Checkout(branch.TargetSha1);
+        }
+
+
+        void RestoreBranch()
+        {
+            if (!WasOnMasterBranch) return;
+            var head = Context.RefContext.Head;
+            var branch =
+                Context.RefContext.Branches
+                    .Where(b => b.Target == head.Target)
+                    .OfType<MasterBranchInfo>()
+                    .FirstOrDefault();
+            if (branch == null) return;
+            Context.GitRepository.Checkout(branch.Name);
+            WasOnMasterBranch = false;
         }
 
     }

@@ -58,7 +58,14 @@ namespace Verbot
             ReleaseContext = new ReleaseContext(RefContext);
             LatestBranchContext = new LatestBranchContext(ReleaseContext);
             MasterBranchContext = new MasterBranchContext(ReleaseContext, RefContext, CalculationContext);
-            CheckContext = new CheckContext(GitRepository, MasterBranchContext, LatestBranchContext, ReleaseContext, RefContext);
+            CheckContext =
+                new CheckContext(
+                    GitRepository,
+                    MasterBranchContext,
+                    LatestBranchContext,
+                    ReleaseContext,
+                    RefContext,
+                    CalculationContext);
         }
 
     }

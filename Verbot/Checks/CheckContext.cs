@@ -1,6 +1,7 @@
 using System.Linq;
 using MacroGit;
 using MacroSemver;
+using Verbot.Calculations;
 using Verbot.LatestBranches;
 using Verbot.MasterBranches;
 using Verbot.Refs;
@@ -17,6 +18,7 @@ namespace Verbot.Checks
         readonly LatestBranchContext LatestBranchContext;
         readonly ReleaseContext ReleaseContext;
         readonly RefContext RefContext;
+        readonly CalculationContext CalculationContext;
 
 
         public CheckContext(
@@ -24,13 +26,15 @@ namespace Verbot.Checks
             MasterBranchContext masterBranchContext,
             LatestBranchContext latestBranchContext,
             ReleaseContext releaseContext,
-            RefContext refContext)
+            RefContext refContext,
+            CalculationContext calculationContext)
         {
             GitRepository = gitRepository;
             MasterBranchContext = masterBranchContext;
             LatestBranchContext = latestBranchContext;
             ReleaseContext = releaseContext;
             RefContext = refContext;
+            CalculationContext = calculationContext;
         }
 
 
@@ -335,9 +339,13 @@ namespace Verbot.Checks
                 if (branch == null)
                 {
                     var version = branchThatShouldExist.Release.Version;
+                    var sha1 = branchThatShouldExist.Release.Commit.Sha1;
                     return Fail(
                         $"Missing {name} branch",
-                        $"Create {name} branch at {version}");
+                        $"Creating {name} branch at {version}",
+                        () => {
+                            GitRepository.CreateBranch(name, sha1);
+                        });
                 }
             }
 
@@ -353,13 +361,17 @@ namespace Verbot.Checks
                 var branch = RefContext.FindBranch(name);
                 if (branch == null) continue;
 
+                var currentCommit = branch.Target;
                 var correctCommit = branchThatShouldExist.Release.Commit;
-                if (branch.Target != correctCommit)
+                if (currentCommit != correctCommit)
                 {
                     var version = branchThatShouldExist.Release.Version;
                     return Fail(
                         $"{name} branch should be at {version}",
-                        $"Move {name} branch to {version}");
+                        $"Moving {name} branch from {currentCommit.Sha1} to {version}",
+                        () => {
+                            GitRepository.CreateOrMoveBranch(name, correctCommit.Sha1);
+                        });
                 }
             }
 
@@ -373,9 +385,14 @@ namespace Verbot.Checks
             {
                 if (!RefContext.MasterBranches.Any(b => b.Name == spec.Name))
                 {
+                    var name = spec.Name;
+                    var sha1 = spec.Commit.Sha1;
                     return Fail(
-                        $"Missing {spec.Name} branch",
-                        $"Create {spec.Name} branch at {spec.Commit.Sha1}");
+                        $"Missing {name} branch",
+                        $"Creating {name} branch at {sha1}",
+                        () => {
+                            GitRepository.CreateBranch(name, sha1);
+                        });
                 }
             }
 
@@ -388,11 +405,16 @@ namespace Verbot.Checks
             foreach (var spec in MasterBranchContext.LatestMasterBranchPoints.OrderBy(spec => spec.Series))
             {
                 var branch = RefContext.MasterBranches.Single(b => b.Name == spec.Name);
-                if (branch.Target != spec.Commit)
+                var currentCommit = branch.Target;
+                var correctCommit = spec.Commit;
+                if (currentCommit != correctCommit)
                 {
                     return Fail(
-                        $"{branch.Name} at incorrect commit {branch.Target.Sha1}",
-                        $"Move {branch.Name} to {spec.Commit.Sha1} without losing its current commits");
+                        $"{branch.Name} branch should be at {correctCommit.Sha1}",
+                        $"Moving {branch.Name} from {currentCommit.Sha1} to {correctCommit.Sha1}",
+                        () => {
+                            GitRepository.CreateOrMoveBranch(branch.Name, correctCommit.Sha1);
+                        });
                 }
             }
 
