@@ -3,8 +3,6 @@ using System.Diagnostics;
 using System.Linq;
 using MacroExceptions;
 using MacroGit;
-using Verbot.LatestBranches;
-using Verbot.MasterBranches;
 using Verbot.Refs;
 using Verbot.Releases;
 

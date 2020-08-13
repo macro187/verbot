@@ -1,10 +1,10 @@
 using System;
-using System.Diagnostics;
-using MacroExceptions;
 using System.Collections.Generic;
-using MacroConsole;
-using MacroGit;
+using System.Diagnostics;
 using System.Linq;
+using MacroConsole;
+using MacroExceptions;
+using MacroGit;
 using Verbot.Commands;
 
 namespace Verbot
@@ -40,7 +40,7 @@ namespace Verbot
             if (gitRepository == null) throw new UserException("Not in a Git repository");
 
             var verbose = false;
-            while(args.Any() && args.Peek().StartsWith("--"))
+            while (args.Any() && args.Peek().StartsWith("--"))
             {
                 var option = args.Dequeue();
                 switch (option)

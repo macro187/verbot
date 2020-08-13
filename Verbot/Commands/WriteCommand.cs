@@ -1,6 +1,6 @@
+using System;
 using System.Collections.Generic;
 using MacroExceptions;
-using System;
 
 namespace Verbot.Commands
 {

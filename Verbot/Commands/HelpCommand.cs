@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using MacroExceptions;
 using System.Diagnostics;
-using System.Reflection;
 using System.IO;
+using System.Reflection;
 using MacroConsole;
+using MacroExceptions;
 using MacroIO;
 
 namespace Verbot.Commands

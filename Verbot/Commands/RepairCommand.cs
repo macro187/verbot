@@ -1,9 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using MacroExceptions;
-using Verbot.Commits;
 using Verbot.Refs;
 
 namespace Verbot.Commands

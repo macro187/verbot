@@ -90,7 +90,8 @@ namespace Verbot.Checks
                 return Fail(
                     "Found invalid release 0.0.0",
                     $"Deleting {releaseZero.Tag.Name} release tag from {releaseZero.Commit.Sha1}",
-                    () => {
+                    () =>
+                    {
                         GitRepository.DeleteTag(releaseZero.Tag.Name);
                     });
             }
@@ -343,7 +344,8 @@ namespace Verbot.Checks
                     return Fail(
                         $"Missing {name} branch",
                         $"Creating {name} branch at {version}",
-                        () => {
+                        () =>
+                        {
                             GitRepository.CreateBranch(name, sha1);
                         });
                 }
@@ -369,7 +371,8 @@ namespace Verbot.Checks
                     return Fail(
                         $"{name} branch should be at {version}",
                         $"Moving {name} branch from {currentCommit.Sha1} to {version}",
-                        () => {
+                        () =>
+                        {
                             GitRepository.CreateOrMoveBranch(name, correctCommit.Sha1);
                         });
                 }
@@ -390,7 +393,8 @@ namespace Verbot.Checks
                     return Fail(
                         $"Missing {name} branch",
                         $"Creating {name} branch at {sha1}",
-                        () => {
+                        () =>
+                        {
                             GitRepository.CreateBranch(name, sha1);
                         });
                 }
@@ -412,7 +416,8 @@ namespace Verbot.Checks
                     return Fail(
                         $"{branch.Name} branch should be at {correctCommit.Sha1}",
                         $"Moving {branch.Name} from {currentCommit.Sha1} to {correctCommit.Sha1}",
-                        () => {
+                        () =>
+                        {
                             GitRepository.CreateOrMoveBranch(branch.Name, correctCommit.Sha1);
                         });
                 }

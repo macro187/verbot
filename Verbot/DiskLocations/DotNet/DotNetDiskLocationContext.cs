@@ -1,8 +1,8 @@
-using System.Linq;
-using System.Collections.Generic;
-using MacroSln;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using MacroGit;
+using MacroSln;
 
 namespace Verbot.DiskLocations.DotNet
 {
