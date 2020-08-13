@@ -51,13 +51,15 @@ namespace Verbot.Calculations
                 IsFirstFeatureSincePreviousRelease =
                     commit.IsFeature && !previousState.HasBeenFeatureSincePreviousRelease,
                 HasBeenFeatureSincePreviousRelease =
-                    commit.IsFeature || previousState.HasBeenFeatureSincePreviousRelease,
+                    commit.IsFeature ||
+                    (previousState.ReleaseTag == null && previousState.HasBeenFeatureSincePreviousRelease),
                 IsBreaking =
                     commit.IsBreaking,
                 IsFirstBreakingSincePreviousRelease =
                     commit.IsBreaking && !previousState.HasBeenBreakingSincePreviousRelease,
                 HasBeenBreakingSincePreviousRelease =
-                    commit.IsBreaking || previousState.HasBeenBreakingSincePreviousRelease,
+                    commit.IsBreaking ||
+                    (previousState.ReleaseTag == null && previousState.HasBeenBreakingSincePreviousRelease),
                 CommitsSincePreviousRelease =
                     previousState.CommitsSincePreviousRelease + 1,
                 CommitterDatePrereleaseComponent =
