@@ -1,7 +1,7 @@
 verbot
 ======
 
-    A tool for managing version numbers using Semantic Versioning and Git
+    A tool for managing Semantic Versioning releases from Git repositories
 
 
 
@@ -18,31 +18,22 @@ Synopsis
 Commands
 ========
 
-    help
-        Display usage information
+    check
+        Check for correctness of commits, releases, and branches
 
-    calc --release
-    calc --prerelease
-        Calculate and output the current version number
+    repair
+        Check for correctness of commits, releases, and branches and, where
+        possible, automatically correct problems
 
-        Details on how version numbers are calculated can be found in the
-        "Version Calculation" section.
-
-        --release
-            Always output a release version number.  If the current commit
-            hasn't been tagged as a release, output a release version as if it
-            was.
-
-        --prerelease
-            Always output a pre-release version number.  If the current commit
-            has been tagged as a release, output a pre-release version as if
-            it wasn't.
+    release
+        Tag the current commit as a release, adjusting master and latest
+        branches accordingly
 
     write
     write --release
     write --prerelease
-        Record the current version number in source code files, and then
-        output it
+        Calculate the version number of the current commit, write it to
+        appropriate locations in source code files, and output it
 
         Details on how version numbers are calculated can be found in the
         "Version Calculation" section.
@@ -52,13 +43,13 @@ Commands
 
         --release
             Always output a release version number.  If the current commit
-            hasn't been tagged as a release, output a release version as if it
-            was.
+            hasn't been tagged as a release, output a release version number
+            as if it was.
 
         --prerelease
             Always output a pre-release version number.  If the current commit
-            has been tagged as a release, output a pre-release version as if
-            it wasn't.
+            has been tagged as a release, output a pre-release version number
+            as if it wasn't.
 
     reset
         Record a default "9999.0.0-alpha" version number in source code files
@@ -66,56 +57,32 @@ Commands
         Details on where version numbers are recorded in source code files can
         be found in the "Versions in Source Code" section.
 
+    calc --release
+    calc --prerelease
+        Calculate the version number of the current commit and output it
+
+        Details on how version numbers are calculated can be found in the
+        "Version Calculation" section.
+
+        --release
+            Always output a release version number.  If the current commit
+            hasn't been tagged as a release, output a release version number
+            as if it was.
+
+        --prerelease
+            Always output a pre-release version number.  If the current commit
+            has been tagged as a release, output a pre-release version number
+            as if it wasn't.
+
     read
-        Output the version number currently recorded in source code files
+        Read the version number currently recorded in source code files and
+        output it
 
         Details on where version numbers are recorded in source code files can
         be found in the "Versions in Source Code" section.
 
-    release
-        Release the version being developed on a master or -master branch
-
-        Specifically:
-
-            Remove the prerelease and build components from the current
-            version, and commit
-
-            Tag with `MAJOR.MINOR.PATCH`
-
-            Create or move the `MAJOR.MINOR-latest` branch
-
-            Create or move the `MAJOR-latest` branch, if appropriate
-
-            Create or move the `latest` branch, if appropriate
-
-            Increment to the next patch version, add the -master prerelease
-            version component, and commit
-
-    push [--dry-run]
-        `git push` any changed or missing version-related branches and tags.
-
-        --dry-run
-            Outputs what branches or tags would be pushed, but doesn't
-            actually do it.
-
-        The operation fails if there are uncommitted changes in the
-        repository.
-
-    check
-        Check basic assumptions about the local repository required for verbot
-        to operate.
-
-    repair
-        Check basic assumptions about the local repository required for verbot
-        to operate and, where possible, automatically correct problems.
-
-    check-remote
-        Check basic assumptions about the remote repsitory required for verbot
-        to operate.
-
-        Specifically:
-            There are no remote release tags that differ from their local
-            equivalents.
+    help
+        Display usage information
 
 
 
